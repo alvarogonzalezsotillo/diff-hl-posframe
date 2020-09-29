@@ -1,0 +1,26 @@
+# file:https://melpa.org/packages/diff-hl-posframe-badge.svg]]
+
+This emacs package shows a posframe with the current hunk diff in a buffer under version control. It is based on [[https://github.com/dgutov/diff-hl][diff-hl]].
+
+
+[[file:screencast.gif]]
+
+* Installation
+
+
+Add this repository to your =load-path=, require it, and enable it for each buffer with =alt-x= =diff-hl-posframe-mode=. A global mode =diff-hl-posframe-global-mode= is also available.
+
+You can add a hook to enable it when oppening a buffer, as in the code below.
+
+#+begin_src emacs-lisp
+(require 'diff-hl-posframe)
+
+(add-hook 'prog-mode-hook 'diff-hl-posframe)
+#+end_src
+
+** Installation from MELPA
+This package is not (yet) available on Melpa.
+
+
+* Similar solutions
+See [[https://github.com/dgutov/diff-hl/pull/112][this pull request]] from [[https://github.com/deadtrickster][deadtrickster]]
