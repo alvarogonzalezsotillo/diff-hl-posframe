@@ -80,6 +80,7 @@ Returns a list with the buffer and the line number of the clicked line."
         (point-in-buffer)
         (line)
         (overlay)
+        (inhibit-redisplay t) ;;https://emacs.stackexchange.com/questions/35680/stop-emacs-from-updating-display
         (buffer (get-buffer-create diff-hl-posframe-buffer-name)))
     
 
@@ -178,7 +179,7 @@ If not, it fallbacks to `diff-hl-diff-goto-hunk`."
 
 ;;;###autoload
 (define-minor-mode diff-hl-posframe-mode
-  "Enables the margin and fringe to show a posframe with vc diffs when clicked. 
+  "Enables the margin and fringe to show a posframe with vc diffs when clicked.
 By default, the posframe shows only the current hunk, and the line of the hunk that matches the current position is highlighted.
 The posframe face, border and other visual preferences are customizable.
 The posframe can be also invoked with the command `diff-hl-posframe-show`"
