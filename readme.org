@@ -31,5 +31,5 @@ It will be installable with =use-package=
 #+end_src
 
 
-* [#C] Similar solutions
+* Similar solutions
 See [[https://github.com/dgutov/diff-hl/pull/112][this pull request]] from [[https://github.com/deadtrickster][deadtrickster]]
