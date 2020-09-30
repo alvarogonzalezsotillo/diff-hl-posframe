@@ -3,7 +3,7 @@
 This emacs package shows a posframe with the current hunk diff in a buffer under version control. It is based on [[https://github.com/dgutov/diff-hl][diff-hl]].
 
 
-[[file:screencast.gif]]
+[[file:diff-hl-posframe.gif]]
 
 * Installation
 
