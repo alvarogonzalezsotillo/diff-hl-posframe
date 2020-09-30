@@ -8,7 +8,7 @@ This emacs package shows a posframe with the current hunk diff in a buffer under
 * Installation
 
 
-Add this repository to your =load-path=, require it, and enable it for each buffer with =alt-x= =diff-hl-posframe-mode=. A global mode =diff-hl-posframe-global-mode= is also available.
+Add this repository to your =load-path=, require it, and enable it for each buffer with =alt-x= =diff-hl-posframe-mode=. A global mode =global-diff-hl-posframe-mode= is also available.
 
 You can add a hook to enable it when oppening a buffer, as in the code below.
 
@@ -19,8 +19,17 @@ You can add a hook to enable it when oppening a buffer, as in the code below.
 #+end_src
 
 ** Installation from MELPA
-This package is not (yet) available on Melpa.
+This package is (not yet) available on Melpa.
+
+It will be installable with =use-package=
+#+begin_src emacs-lisp
+(use-package diff-hl-posframe
+  :ensure t
+  :config
+  (global-diff-hl-posframe-mode)
+)
+#+end_src
 
 
-* Similar solutions
+* [#C] Similar solutions
 See [[https://github.com/dgutov/diff-hl/pull/112][this pull request]] from [[https://github.com/deadtrickster][deadtrickster]]
