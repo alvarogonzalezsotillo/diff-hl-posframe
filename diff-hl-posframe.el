@@ -1,3 +1,24 @@
+;;; diff-hl-posframe.el --- Integrate posframe and diff-hl-diff-goto-hunk -*- lexical-binding: t -*-
+
+
+;; Author:   Álvaro González Sotillo <alvarogonzalezsotillo@gmail.com>
+;; URL:      https://github.com/alvarogonzalezsotillo/diff-hl-posframe.
+;; Keywords: vc, diff, diff-hl, posframe
+;; Version:  1.0
+;; Package-Requires: ((diff-hl "1.8.7") (posframe "0.8.0"))
+
+;;; Commentary:
+
+;; `diff-hl-posframe-mode' shows a posframe with the current modified
+;; hunk when clicking in the margin or the fringe.  It fallbacks to
+;; `diff-hl-diff-goto-hunk' if there is not graphical environment.
+
+;;
+;; To use it in all buffers:
+;;
+;; (global-diff-hl-posframe-mode)
+;;
+
 ;;; Code:
 
 
@@ -12,7 +33,7 @@
     (define-key map (kbd "<left-fringe> <mouse-1>") 'diff-hl-posframe--click)
     (define-key map (kbd "<right-fringe> <mouse-1>") 'diff-hl-posframe--click)
     map)
-  "Keymap for diff-hl-posframe-mode.")
+  "Keymap for command `diff-hl-posframe-mode'.")
 
 (defvar diff-hl-posframe-buffer-name "*diff-hl-posframe-hunk*" "Name of the posframe used by diff-hl-posframe.")
 (defvar diff-hl-posframe-frame nil "The postframe frame used in diff-hl-posframe package.")
@@ -164,8 +185,7 @@ If not, it fallbacks to `diff-hl-diff-goto-hunk`."
                            :accept-focus  nil
                            :internal-border-color diff-hl-posframe-internal-border-color ; Doesn't always work, better define internal-border face
                            :hidehandler 'diff-hl-posframe--hide-handler
-                           :override-parameters diff-hl-posframe-parameters
-                           ))
+                           :override-parameters diff-hl-posframe-parameters))
 
            ;; Recenter arround point
            (with-selected-frame diff-hl-posframe-frame
@@ -186,8 +206,7 @@ The posframe can be also invoked with the command `diff-hl-posframe-show`"
   :group diff-hl-posframe-group
 
   (unless (and (featurep 'diff-hl) (featurep 'posframe) )
-    (error "Required packages not available: diff-hl-posframe-mode needs diff-hl and posframe"))
-  )
+    (error "Required packages not available: diff-hl-posframe-mode needs diff-hl and posframe")))
 
 ;;;###autoload
 (define-globalized-minor-mode diff-hl-posframe-global-mode
