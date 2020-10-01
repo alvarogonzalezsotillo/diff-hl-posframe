@@ -34,7 +34,7 @@ It will be installable with =use-package=
 - =diff-hl-posframe-narrow=: Defaults to =t=. If =t=, the contents of the posframe are narrowed to the current hunk.
 - =diff-hl-posframe-clicked-line-face=: The face used to highlight the corresponding line of the clicked line.
 - =diff-hl-posframe-face=: The face used in the posframe.
-- The apearance of the posframe can be configured with the following options, that matches the parameters of =[[https://github.com/tumashu/posframe/blob/7b92a54e588889a74d36d51167e067676db7be8a/posframe.el#L372][posframe-show=]] function
+- The apearance of the posframe can be configured with the following options, that matches the parameters of =[[https://github.com/tumashu/posframe/blob/7b92a54e588889a74d36d51167e067676db7be8a/posframe.el#L372][posframe-show]]=function
   - =diff-hl-posframe-internal-border-width=
   - =diff-hl-posframe-internal-border-color=
   - =diff-hl-posframe-poshandler=
