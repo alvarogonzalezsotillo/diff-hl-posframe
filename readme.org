@@ -1,12 +1,11 @@
 # file:https://melpa.org/packages/diff-hl-posframe-badge.svg]]
 
-This emacs package shows a posframe with the current hunk diff in a buffer under version control. It is based on [[https://github.com/dgutov/diff-hl][diff-hl]].
+This emacs package shows a [[https://github.com/tumashu/posframe][posframe]] with the current hunk diff in a buffer under version control. It is based on [[https://github.com/dgutov/diff-hl][diff-hl]].
 
 
 [[file:diff-hl-posframe.gif]]
 
 * Installation
-
 
 Add this repository to your =load-path=, require it, and enable it for each buffer with =alt-x= =diff-hl-posframe-mode=. A global mode =global-diff-hl-posframe-mode= is also available.
 
@@ -14,7 +13,6 @@ You can add a hook to enable it when oppening a buffer, as in the code below.
 
 #+begin_src emacs-lisp
 (require 'diff-hl-posframe)
-
 (add-hook 'prog-mode-hook 'diff-hl-posframe)
 #+end_src
 
@@ -26,15 +24,16 @@ It will be installable with =use-package=
 (use-package diff-hl-posframe
   :ensure t
   :config
-  (global-diff-hl-posframe-mode)
-)
+  (face-spec-set 'diff-hl-posframe-face
+                 '((t :background "darkblue") (:height 0.8)))
+  (global-diff-hl-posframe-mode))
 #+end_src
 
 * Customization
-- =diff-hl-posframe-narrow=: Defaults to =t=. If =t=, the contents of the posframe are narrowed to the current hunk.
-- =diff-hl-posframe-clicked-line-face=: The face used to highlight the corresponding line of the clicked line.
-- =diff-hl-posframe-face=: The face used in the posframe.
-- The apearance of the posframe can be configured with the following options, that matches the parameters of [[https://github.com/tumashu/posframe/blob/7b92a54e588889a74d36d51167e067676db7be8a/posframe.el#L372][ =posframe-show= ]] function
+- =diff-hl-posframe-narrow=: If =t= (default) the contents of the posframe are narrowed to the current hunk.
+- =diff-hl-posframe-clicked-line-face=: The face used to highlight the corresponding line of the clicked line. Defaults to inverse video.
+- =diff-hl-posframe-face=: The face used in the posframe. Defaults to default face with size =0.8=
+- The apearance of the posframe can be configured with the following options, that matches the parameters of [[https://github.com/tumashu/posframe/blob/7b92a54e588889a74d36d51167e067676db7be8a/posframe.el#L372][ =posframe-show= ]] function:
   - =diff-hl-posframe-internal-border-width=
   - =diff-hl-posframe-internal-border-color=
   - =diff-hl-posframe-poshandler=
