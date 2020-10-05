@@ -83,7 +83,7 @@
       t
     (let* ((invoking-command-p (or
                                 (eq this-command 'diff-hl-posframe--click)
-                                (eq this-command 'diff-hl-posframe-show)
+                                (eq this-command 'diff-hl-show-hunk)
                                 (eq this-command 'handle-switch-frame)
                                 ))
            (ignore-command-p (eq this-command 'ignore))
@@ -155,10 +155,109 @@ Returns a list with the buffer and the line number of the clicked line."
 
   ;; Go to clicked spot
   (posn-set-point (event-start event))
-  (diff-hl-posframe-show))
+  (diff-hl-show-hunk))
 
 
-(defun diff-hl-posframe-show ()
+(defun diff-hl-popup--up ()
+  (interactive)
+  (when diff-hl-popup
+    (popup-scroll-up diff-hl-popup)))
+
+(defun diff-hl-popup--pageup ()
+  (interactive)
+  (when diff-hl-popup
+    (popup-scroll-up diff-hl-popup (popup-height diff-hl-popup))))
+
+(defun diff-hl-popup--pagedown ()
+  (interactive)
+  (when diff-hl-popup
+    (popup-scroll-down diff-hl-popup (popup-height diff-hl-popup))))
+
+(defun diff-hl-popup--down ()
+  (interactive)
+  (when diff-hl-popup
+    (popup-scroll-down diff-hl-popup)))
+
+(defun diff-hl-popup--hide ()
+  (interactive)
+  (when diff-hl-popup
+    (diff-hl-popup-transient-mode -1)
+    (popup-hide diff-hl-popup)
+    (setq diff-hl-popup nil)))
+
+(defvar diff-hl-popup nil "Popup where show the current hunk.")
+  
+(defvar diff-hl-popup-transient-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "<prior>") 'diff-hl-popup--pageup)
+    (define-key map (kbd "M-v") 'diff-hl-popup--pageup)
+    (define-key map (kbd "<next>") 'diff-hl-popup--pagedown)
+    (define-key map (kbd "C-v") 'diff-hl-popup--pagedown)
+    (define-key map (kbd "<up>") 'diff-hl-popup--up)
+    (define-key map (kbd "C-p") 'diff-hl-popup--up)
+    (define-key map (kbd "<down>") 'diff-hl-popup--down)
+    (define-key map (kbd "C-n") 'diff-hl-popup--down)
+    (define-key map (kbd "C-g") 'diff-hl-popup--hide)
+    (define-key map [escape] 'diff-hl-popup--hide)
+    
+    map)
+  "Keymap for command `diff-hl-popup-transient-mode'.")
+
+(define-minor-mode diff-hl-popup-transient-mode
+  "Temporal minor mode to control diff-hl popup."
+
+  :global nil
+  :group diff-hl-posframe-group
+  
+  (message "diff-hl-popup-transient-mode:%s" diff-hl-popup-transient-mode)
+  
+  (remove-hook 'post-command-hook #'diff-hl-popup--post-command-hook nil)
+  (when diff-hl-popup-transient-mode
+    (add-hook 'post-command-hook #'diff-hl-popup--post-command-hook nil)))
+
+
+
+(defun diff-hl-popup--post-command-hook ()
+  "Called each time the region is changed."
+  (message "last-command-event:%s %s" last-command-event (type-of last-command-event)))
+
+
+
+(defun diff-hl-show-hunk-popup (buffer line)
+  "Implementation to show the hunk in a posframe.  BUFFER is a buffer with the hunk, and the central line should be LINE."
+  
+  (let ((popup (popup-tip buffer :scroll-bar t :nowait t )))
+    (setq diff-hl-popup popup)
+    (popup-scroll-down popup line)
+    (popup-select popup line)
+    (diff-hl-popup-transient-mode)
+    (message "popup shown")
+    ))
+
+(defun diff-hl-show-hunk-posframe (buffer line)
+  "Implementation to show the hunk in a posframe.  BUFFER is a buffer with the hunk, and the central line should be LINE."
+  (setq posframe-mouse-banish nil)
+  (setq
+   diff-hl-posframe-frame
+   (posframe-show buffer
+                  :position (point)
+                  :poshandler diff-hl-posframe-poshandler
+                  :internal-border-width diff-hl-posframe-internal-border-width
+                  :accept-focus  nil
+                  :internal-border-color diff-hl-posframe-internal-border-color ; Doesn't always work, better define internal-border face
+                  :hidehandler 'diff-hl-posframe--hide-handler
+                  :override-parameters diff-hl-posframe-parameters))
+
+  ;; Recenter arround point
+  (with-selected-frame diff-hl-posframe-frame
+    (with-current-buffer buffer
+      (goto-char (point-min))
+      (forward-line (1- line))
+      (insert "hola")
+      (select-window (window-main-window diff-hl-posframe-frame))
+      (recenter))))
+
+(defun diff-hl-show-hunk ()
   "Show a the diffs with vc last version in a posframe, if available.
 If not, it fallbacks to `diff-hl-diff-goto-hunk`."
   (interactive)
@@ -173,27 +272,7 @@ If not, it fallbacks to `diff-hl-diff-goto-hunk`."
          (let* ((buffer-and-line (diff-hl-posframe-buffer))
                 (buffer (elt buffer-and-line 0))
                 (line (elt buffer-and-line 1)))
-        
-           ;; Show posframe
-           (setq posframe-mouse-banish nil)
-           (setq
-            diff-hl-posframe-frame
-            (posframe-show buffer
-                           :position (point)
-                           :poshandler diff-hl-posframe-poshandler
-                           :internal-border-width diff-hl-posframe-internal-border-width
-                           :accept-focus  nil
-                           :internal-border-color diff-hl-posframe-internal-border-color ; Doesn't always work, better define internal-border face
-                           :hidehandler 'diff-hl-posframe--hide-handler
-                           :override-parameters diff-hl-posframe-parameters))
-
-           ;; Recenter arround point
-           (with-selected-frame diff-hl-posframe-frame
-             (with-current-buffer buffer
-               (goto-char (point-min))
-               (forward-line (1- line))
-               (select-window (window-main-window diff-hl-posframe-frame))
-               (recenter)))))))
+           (diff-hl-show-hunk-posframe buffer line)))))
 
 
 
@@ -202,7 +281,7 @@ If not, it fallbacks to `diff-hl-diff-goto-hunk`."
   "Enables the margin and fringe to show a posframe with vc diffs when clicked.
 By default, the posframe shows only the current hunk, and the line of the hunk that matches the current position is highlighted.
 The posframe face, border and other visual preferences are customizable.
-The posframe can be also invoked with the command `diff-hl-posframe-show`"
+The posframe can be also invoked with the command `diff-hl-show-hunk`"
   :group diff-hl-posframe-group
 
   (unless (and (featurep 'diff-hl) (featurep 'posframe) )
