@@ -1,22 +1,23 @@
-;;; diff-hl-posframe.el --- Integrate posframe and diff-hl-diff-goto-hunk -*- lexical-binding: t -*-
+;;; diff-hl-show-hunk.el --- Integrate posframe/tooltip and diff-hl-diff-goto-hunk -*- lexical-binding: t -*-
 
 
 ;; Author:   Álvaro González Sotillo <alvarogonzalezsotillo@gmail.com>
-;; URL:      https://github.com/alvarogonzalezsotillo/diff-hl-posframe.
+;; URL:      https://github.com/alvarogonzalezsotillo/diff-hl-show-hunk.
 ;; Keywords: vc, diff, diff-hl, posframe
 ;; Version:  1.0
 ;; Package-Requires: ((diff-hl "1.8.7") (posframe "0.8.0"))
 
 ;;; Commentary:
 
-;; `diff-hl-posframe-mode' shows a posframe with the current modified
-;; hunk when clicking in the margin or the fringe.  It fallbacks to
-;; `diff-hl-diff-goto-hunk' if there is not graphical environment.
+;; `diff-hl-show-hunk-mode' shows a posframe/tooltip with the current
+;; modified hunk when clicking in the margin or the fringe.  It
+;; fallbacks to `diff-hl-diff-goto-hunk' if there is not a
+;; `diff-hl-show-hunk-function` defined
 
 ;;
 ;; To use it in all buffers:
 ;;
-;; (global-diff-hl-posframe-mode)
+;; (global-diff-hl-show-hunk-mode)
 ;;
 
 ;;; Code:
@@ -26,73 +27,73 @@
 (require 'posframe)
 (require 'diff-hl)
 
-(defvar diff-hl-posframe-mode-map
+(defvar diff-hl-show-hunk-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "<left-margin> <mouse-1>") 'diff-hl-posframe--click)
-    (define-key map (kbd "<right-margin> <mouse-1>") 'diff-hl-posframe--click)
-    (define-key map (kbd "<left-fringe> <mouse-1>") 'diff-hl-posframe--click)
-    (define-key map (kbd "<right-fringe> <mouse-1>") 'diff-hl-posframe--click)
+    (define-key map (kbd "<left-margin> <mouse-1>") 'diff-hl-show-hunk--click)
+    (define-key map (kbd "<right-margin> <mouse-1>") 'diff-hl-show-hunk--click)
+    (define-key map (kbd "<left-fringe> <mouse-1>") 'diff-hl-show-hunk--click)
+    (define-key map (kbd "<right-fringe> <mouse-1>") 'diff-hl-show-hunk--click)
     map)
-  "Keymap for command `diff-hl-posframe-mode'.")
+  "Keymap for command `diff-hl-show-hunk-mode'.")
 
-(defvar diff-hl-posframe-buffer-name "*diff-hl-posframe-hunk*" "Name of the posframe used by diff-hl-posframe.")
-(defvar diff-hl-posframe-frame nil "The postframe frame used in diff-hl-posframe package.")
+(defvar diff-hl-show-hunk-buffer-name "*diff-hl-show-hunk-buffer*" "Name of the posframe used by diff-hl-show-hunk.")
+(defvar diff-hl-show-hunk-frame nil "The postframe frame used in diff-hl-show-hunk package.")
 
-(defgroup diff-hl-posframe-group nil
+(defgroup diff-hl-show-hunk-group nil
   "Show vc diffs in a posframe."
   :group 'convenience)
 
-(defcustom diff-hl-posframe-hunk-boundary "^@@.*@@"
+(defcustom diff-hl-show-hunk-boundary "^@@.*@@"
   "Regex that marks the boundary of a hunk in *vc-diff* buffer."
   :type 'string)
 
 
-(defcustom diff-hl-posframe-internal-border-width 2
+(defcustom diff-hl-show-hunk-internal-border-width 2
   "Internal border width of the posframe.  The color can be customized with `internal-border` face."
   :type 'integer)
 
 
-(defcustom diff-hl-posframe-internal-border-color "#00ffff"
+(defcustom diff-hl-show-hunk-internal-border-color "#00ffff"
   "Internal border color of the posframe.  If it doesn't work, try with `internal-border` face."
   :type 'color)
 
-(defcustom diff-hl-posframe-narrow t
+(defcustom diff-hl-show-hunk-narrow t
   "Narrow the differences to the current hunk."
   :type 'boolean)
 
-(defcustom diff-hl-posframe-poshandler nil
+(defcustom diff-hl-show-hunk-poshandler nil
   "Poshandler of the posframe (see `posframe-show`)."
   :type 'function)
 
-(defcustom diff-hl-posframe-parameters nil
+(defcustom diff-hl-show-hunk-parameters nil
   "The frame parameters used by helm-posframe."
   :type 'string)
 
-(defface diff-hl-posframe-clicked-line-face
+(defface diff-hl-show-hunk-clicked-line-face
   '((t (:inverse-video t)))
   "Face for the clicked line in the diff output.")
 
-(defface diff-hl-posframe-face
+(defface diff-hl-show-hunk-face
   '((t (:height 0.8)))
   "Face for the posframe.")
 
-(defun diff-hl-posframe--hide-handler  (_info)
+(defun diff-hl-show-hunk--hide-handler  (_info)
   "Hide the posframe if the event is outside the posframe (after the posframe has been opened)."
 
-  (if (not (frame-visible-p diff-hl-posframe-frame))
+  (if (not (frame-visible-p diff-hl-show-hunk-frame))
       t
     (let* ((invoking-command-p (or
-                                (eq this-command 'diff-hl-posframe--click)
+                                (eq this-command 'diff-hl-show-hunk--click)
                                 (eq this-command 'diff-hl-show-hunk)
                                 (eq this-command 'handle-switch-frame)
                                 ))
            (ignore-command-p (eq this-command 'ignore))
-           (command-in-posframe-p (eq last-event-frame diff-hl-posframe-frame))
+           (command-in-posframe-p (eq last-event-frame diff-hl-show-hunk-frame))
            (keep-open-p (or invoking-command-p command-in-posframe-p ignore-command-p)))
       (not keep-open-p))))
 
 
-(defun diff-hl-posframe-buffer ()
+(defun diff-hl-show-hunk-buffer ()
   "Create the buffer with the contents of the hunk at point.
 The buffer has the point in the corresponding line of the hunk.
 Returns a list with the buffer and the line number of the clicked line."
@@ -102,7 +103,7 @@ Returns a list with the buffer and the line number of the clicked line."
         (line)
         (overlay)
         (inhibit-redisplay t) ;;https://emacs.stackexchange.com/questions/35680/stop-emacs-from-updating-display
-        (buffer (get-buffer-create diff-hl-posframe-buffer-name)))
+        (buffer (get-buffer-create diff-hl-show-hunk-buffer-name)))
     
 
     ;; Get differences
@@ -121,23 +122,23 @@ Returns a list with the buffer and the line number of the clicked line."
       ;; Highlight the clicked line
       (goto-char point-in-buffer)
       (setq overlay (make-overlay (point-at-bol) (min (point-max) (1+ (point-at-eol)))))
-      (overlay-put overlay 'face 'diff-hl-posframe-clicked-line-face)
+      (overlay-put overlay 'face 'diff-hl-show-hunk-clicked-line-face)
       
       ;; diff-mode, highlight hunks boundaries
       (diff-mode)
-      (highlight-regexp diff-hl-posframe-hunk-boundary)
+      (highlight-regexp diff-hl-show-hunk-hunk-boundary)
       
 
       ;; Change face size
-      (buffer-face-set 'diff-hl-posframe-face)
+      (buffer-face-set 'diff-hl-show-hunk-face)
       
 
       ;;  Find the hunk and narrow to it
-      (when diff-hl-posframe-narrow
-        (re-search-backward diff-hl-posframe-hunk-boundary nil 1)
+      (when diff-hl-show-hunk-narrow
+        (re-search-backward diff-hl-show-hunk-hunk-boundary nil 1)
         (forward-line 1)
         (let* ((start (point)))
-          (re-search-forward diff-hl-posframe-hunk-boundary nil 1)
+          (re-search-forward diff-hl-show-hunk-hunk-boundary nil 1)
           (move-beginning-of-line nil)
           (narrow-to-region start (point)))
         ;; Come back to the clicked line
@@ -149,7 +150,7 @@ Returns a list with the buffer and the line number of the clicked line."
     (list buffer line)))
 
 
-(defun diff-hl-posframe--click (event)
+(defun diff-hl-show-hunk--click (event)
   "Called when user clicks on margins.  EVENT is click information."
   (interactive "event")
 
@@ -207,7 +208,7 @@ Returns a list with the buffer and the line number of the clicked line."
   "Temporal minor mode to control diff-hl popup."
 
   :global nil
-  :group diff-hl-posframe-group
+  :group diff-hl-show-hunk-group
   
   (message "diff-hl-popup-transient-mode:%s" diff-hl-popup-transient-mode)
   
@@ -238,23 +239,23 @@ Returns a list with the buffer and the line number of the clicked line."
   "Implementation to show the hunk in a posframe.  BUFFER is a buffer with the hunk, and the central line should be LINE."
   (setq posframe-mouse-banish nil)
   (setq
-   diff-hl-posframe-frame
+   diff-hl-show-hunk-frame
    (posframe-show buffer
                   :position (point)
-                  :poshandler diff-hl-posframe-poshandler
-                  :internal-border-width diff-hl-posframe-internal-border-width
+                  :poshandler diff-hl-show-hunk-poshandler
+                  :internal-border-width diff-hl-show-hunk-internal-border-width
                   :accept-focus  nil
-                  :internal-border-color diff-hl-posframe-internal-border-color ; Doesn't always work, better define internal-border face
-                  :hidehandler 'diff-hl-posframe--hide-handler
-                  :override-parameters diff-hl-posframe-parameters))
+                  :internal-border-color diff-hl-show-hunk-internal-border-color ; Doesn't always work, better define internal-border face
+                  :hidehandler 'diff-hl-show-hunk--hide-handler
+                  :override-parameters diff-hl-show-hunk-parameters))
 
   ;; Recenter arround point
-  (with-selected-frame diff-hl-posframe-frame
+  (with-selected-frame diff-hl-show-hunk-frame
     (with-current-buffer buffer
       (goto-char (point-min))
       (forward-line (1- line))
       (insert "hola")
-      (select-window (window-main-window diff-hl-posframe-frame))
+      (select-window (window-main-window diff-hl-show-hunk-frame))
       (recenter))))
 
 (defun diff-hl-show-hunk ()
@@ -269,7 +270,7 @@ If not, it fallbacks to `diff-hl-diff-goto-hunk`."
          (diff-hl-diff-goto-hunk))
         (t
 
-         (let* ((buffer-and-line (diff-hl-posframe-buffer))
+         (let* ((buffer-and-line (diff-hl-show-hunk-buffer))
                 (buffer (elt buffer-and-line 0))
                 (line (elt buffer-and-line 1)))
            (diff-hl-show-hunk-posframe buffer line)))))
@@ -277,20 +278,20 @@ If not, it fallbacks to `diff-hl-diff-goto-hunk`."
 
 
 ;;;###autoload
-(define-minor-mode diff-hl-posframe-mode
+(define-minor-mode diff-hl-show-hunk-mode
   "Enables the margin and fringe to show a posframe with vc diffs when clicked.
 By default, the posframe shows only the current hunk, and the line of the hunk that matches the current position is highlighted.
 The posframe face, border and other visual preferences are customizable.
 The posframe can be also invoked with the command `diff-hl-show-hunk`"
-  :group diff-hl-posframe-group
+  :group diff-hl-show-hunk-group
 
   (unless (and (featurep 'diff-hl) (featurep 'posframe) )
-    (error "Required packages not available: diff-hl-posframe-mode needs diff-hl and posframe")))
+    (error "Required packages not available: diff-hl-show-hunk-mode needs diff-hl and posframe")))
 
 ;;;###autoload
-(define-globalized-minor-mode diff-hl-posframe-global-mode
-  diff-hl-posframe-mode
-  diff-hl-posframe-mode)
+(define-globalized-minor-mode diff-hl-show-hunk-global-mode
+  diff-hl-show-hunk-mode
+  diff-hl-show-hunk-mode)
 
-(provide 'diff-hl-posframe)
-;;; diff-hl-posframe.el ends here
+(provide 'diff-hl-show-hunk)
+;;; diff-hl-show-hunk.el ends here
