@@ -69,6 +69,15 @@
   "The frame parameters used by helm-posframe."
   :type 'string)
 
+(defcustom diff-hl-show-hunk-function 'diff-hl-show-hunk-popup
+  "The function used to reder the hunk.
+The function receives as
+first parameter a buffer with the contents of the hunk, and as
+second parameter the line number corresponding to the clicked
+line in the original buffer.  There are two built in funcions:
+`diff-hl-show-hunk-popup' and `diff-hl-show-hunk-posframe'"
+  :type 'function)
+
 (defface diff-hl-show-hunk-clicked-line-face
   '((t (:inverse-video t)))
   "Face for the clicked line in the diff output.")
@@ -126,7 +135,7 @@ Returns a list with the buffer and the line number of the clicked line."
       
       ;; diff-mode, highlight hunks boundaries
       (diff-mode)
-      (highlight-regexp diff-hl-show-hunk-hunk-boundary)
+      (highlight-regexp diff-hl-show-hunk-boundary)
       
 
       ;; Change face size
@@ -135,10 +144,10 @@ Returns a list with the buffer and the line number of the clicked line."
 
       ;;  Find the hunk and narrow to it
       (when diff-hl-show-hunk-narrow
-        (re-search-backward diff-hl-show-hunk-hunk-boundary nil 1)
+        (re-search-backward diff-hl-show-hunk-boundary nil 1)
         (forward-line 1)
         (let* ((start (point)))
-          (re-search-forward diff-hl-show-hunk-hunk-boundary nil 1)
+          (re-search-forward diff-hl-show-hunk-boundary nil 1)
           (move-beginning-of-line nil)
           (narrow-to-region start (point)))
         ;; Come back to the clicked line
@@ -266,14 +275,14 @@ If not, it fallbacks to `diff-hl-diff-goto-hunk`."
          (message "The buffer is not under version control"))
         ((not (diff-hl-hunk-overlay-at (point)))
          (message "There is no modified hunk at pos %s" (point)))
-        ((not (posframe-workable-p))
+        ((not diff-hl-show-hunk-function)
          (diff-hl-diff-goto-hunk))
         (t
 
          (let* ((buffer-and-line (diff-hl-show-hunk-buffer))
                 (buffer (elt buffer-and-line 0))
                 (line (elt buffer-and-line 1)))
-           (diff-hl-show-hunk-posframe buffer line)))))
+           (funcall diff-hl-show-hunk-function buffer line)))))
 
 
 
