@@ -86,19 +86,17 @@ line in the original buffer.  There are two built in funcions:
   '((t (:height 0.8)))
   "Face for the posframe.")
 
+(defun diff-hl-show-hunk-ignorable-command-p (command)
+  (member command '(ignore diff-hl-show-hunk handle-switch-frame diff-hl-show-hunk--click)))
+
 (defun diff-hl-show-hunk--hide-handler  (_info)
   "Hide the posframe if the event is outside the posframe (after the posframe has been opened)."
 
   (if (not (frame-visible-p diff-hl-show-hunk-frame))
       t
-    (let* ((invoking-command-p (or
-                                (eq this-command 'diff-hl-show-hunk--click)
-                                (eq this-command 'diff-hl-show-hunk)
-                                (eq this-command 'handle-switch-frame)
-                                ))
-           (ignore-command-p (eq this-command 'ignore))
+    (let* ((ignore-command-p (diff-hl-show-hunk-ignorable-command-p this-command))
            (command-in-posframe-p (eq last-event-frame diff-hl-show-hunk-frame))
-           (keep-open-p (or invoking-command-p command-in-posframe-p ignore-command-p)))
+           (keep-open-p (or command-in-posframe-p ignore-command-p)))
       (not keep-open-p))))
 
 
@@ -190,8 +188,8 @@ Returns a list with the buffer and the line number of the clicked line."
 
 (defun diff-hl-popup--hide ()
   (interactive)
+  (diff-hl-popup-transient-mode -1)
   (when diff-hl-popup
-    (diff-hl-popup-transient-mode -1)
     (popup-hide diff-hl-popup)
     (setq diff-hl-popup nil)))
 
@@ -209,9 +207,16 @@ Returns a list with the buffer and the line number of the clicked line."
     (define-key map (kbd "C-n") 'diff-hl-popup--down)
     (define-key map (kbd "C-g") 'diff-hl-popup--hide)
     (define-key map [escape] 'diff-hl-popup--hide)
+    ;;http://ergoemacs.org/emacs/emacs_mouse_wheel_config.html
+    (define-key map (kbd "<mouse-4>") 'diff-hl-popup--up)
+    (define-key map (kbd "<wheel-up>") 'diff-hl-popup--up)
+    (define-key map (kbd "<mouse-5>") 'diff-hl-popup--down)
+    (define-key map (kbd "<wheel-down>") 'diff-hl-popup--down)
     
     map)
-  "Keymap for command `diff-hl-popup-transient-mode'.")
+  "Keymap for command `diff-hl-popup-transient-mode'.
+Capture all the vertical movement of the point, and converts it
+to scroll in the popup")
 
 (define-minor-mode diff-hl-popup-transient-mode
   "Temporal minor mode to control diff-hl popup."
@@ -225,16 +230,22 @@ Returns a list with the buffer and the line number of the clicked line."
   (when diff-hl-popup-transient-mode
     (add-hook 'post-command-hook #'diff-hl-popup--post-command-hook nil)))
 
-
-
 (defun diff-hl-popup--post-command-hook ()
   "Called each time the region is changed."
-  (message "last-command-event:%s %s" last-command-event (type-of last-command-event)))
+  (let ((allowed-command (or
+                          (diff-hl-show-hunk-ignorable-command-p this-command)
+                          (string-match-p "diff-hl-" (symbol-name this-command)))))
+    (message "this-command:%s %s" this-command  allowed-command)
+    (unless allowed-command
+      (diff-hl-popup--hide))))
 
 
 
 (defun diff-hl-show-hunk-popup (buffer line)
   "Implementation to show the hunk in a posframe.  BUFFER is a buffer with the hunk, and the central line should be LINE."
+
+  (when diff-hl-popup
+    (popup-hide diff-hl-popup))
   
   (let ((popup (popup-tip buffer :scroll-bar t :nowait t )))
     (setq diff-hl-popup popup)
@@ -256,6 +267,7 @@ Returns a list with the buffer and the line number of the clicked line."
                   :accept-focus  nil
                   :internal-border-color diff-hl-show-hunk-internal-border-color ; Doesn't always work, better define internal-border face
                   :hidehandler 'diff-hl-show-hunk--hide-handler
+                  :respect-header-line t
                   :override-parameters diff-hl-show-hunk-parameters))
 
   ;; Recenter arround point
