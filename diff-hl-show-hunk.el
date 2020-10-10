@@ -87,6 +87,7 @@ line in the original buffer.  There are two built in funcions:
   "Face for the posframe.")
 
 (defun diff-hl-show-hunk-ignorable-command-p (command)
+  "Decide if COMMAND is a command allowed while showing a posframe or a popup."
   (member command '(ignore diff-hl-show-hunk handle-switch-frame diff-hl-show-hunk--click)))
 
 (defun diff-hl-show-hunk--hide-handler  (_info)
@@ -166,97 +167,113 @@ Returns a list with the buffer and the line number of the clicked line."
   (diff-hl-show-hunk))
 
 
-(defun diff-hl-popup--up ()
+(defun diff-hl-show-hunk--popup-up ()
   (interactive)
-  (when diff-hl-popup
-    (popup-scroll-up diff-hl-popup)))
+  (when diff-hl-show-hunk--popup
+    (popup-scroll-up diff-hl-show-hunk--popup)))
 
-(defun diff-hl-popup--pageup ()
+(defun diff-hl-show-hunk--popup-pageup ()
   (interactive)
-  (when diff-hl-popup
-    (popup-scroll-up diff-hl-popup (popup-height diff-hl-popup))))
+  (when diff-hl-show-hunk--popup
+    (popup-scroll-up diff-hl-show-hunk--popup (popup-height diff-hl-show-hunk--popup))))
 
-(defun diff-hl-popup--pagedown ()
+(defun diff-hl-show-hunk--popup-pagedown ()
   (interactive)
-  (when diff-hl-popup
-    (popup-scroll-down diff-hl-popup (popup-height diff-hl-popup))))
+  (when diff-hl-show-hunk--popup
+    (popup-scroll-down diff-hl-show-hunk--popup (popup-height diff-hl-show-hunk--popup))))
 
-(defun diff-hl-popup--down ()
+(defun diff-hl-show-hunk--popup-down ()
   (interactive)
-  (when diff-hl-popup
-    (popup-scroll-down diff-hl-popup)))
+  (when diff-hl-show-hunk--popup
+    (popup-scroll-down diff-hl-show-hunk--popup)))
 
-(defun diff-hl-popup--hide ()
+(defun diff-hl-show-hunk--popup-hide ()
   (interactive)
-  (diff-hl-popup-transient-mode -1)
-  (when diff-hl-popup
-    (popup-hide diff-hl-popup)
-    (setq diff-hl-popup nil)))
+  (diff-hl-show-hunk--popup-transient-mode -1)
+  (when diff-hl-show-hunk--popup
+    (popup-hide diff-hl-show-hunk--popup)
+    (setq diff-hl-show-hunk--popup nil)))
 
-(defvar diff-hl-popup nil "Popup where show the current hunk.")
+(defvar diff-hl-show-hunk--popup nil "Popup where show the current hunk.")
   
-(defvar diff-hl-popup-transient-mode-map
+(defvar diff-hl-show-hunk--popup-transient-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "<prior>") 'diff-hl-popup--pageup)
-    (define-key map (kbd "M-v") 'diff-hl-popup--pageup)
-    (define-key map (kbd "<next>") 'diff-hl-popup--pagedown)
-    (define-key map (kbd "C-v") 'diff-hl-popup--pagedown)
-    (define-key map (kbd "<up>") 'diff-hl-popup--up)
-    (define-key map (kbd "C-p") 'diff-hl-popup--up)
-    (define-key map (kbd "<down>") 'diff-hl-popup--down)
-    (define-key map (kbd "C-n") 'diff-hl-popup--down)
-    (define-key map (kbd "C-g") 'diff-hl-popup--hide)
-    (define-key map [escape] 'diff-hl-popup--hide)
+    (define-key map (kbd "<prior>") 'diff-hl-show-hunk--popup-pageup)
+    (define-key map (kbd "M-v") 'diff-hl-show-hunk--popup-pageup)
+    (define-key map (kbd "<next>") 'diff-hl-show-hunk--popup-pagedown)
+    (define-key map (kbd "C-v") 'diff-hl-show-hunk--popup-pagedown)
+    (define-key map (kbd "<up>") 'diff-hl-show-hunk--popup-up)
+    (define-key map (kbd "C-p") 'diff-hl-show-hunk--popup-up)
+    (define-key map (kbd "<down>") 'diff-hl-show-hunk--popup-down)
+    (define-key map (kbd "C-n") 'diff-hl-show-hunk--popup-down)
+    (define-key map (kbd "C-g") 'diff-hl-show-hunk--popup-hide)
+    (define-key map [escape] 'diff-hl-show-hunk--popup-hide)
     ;;http://ergoemacs.org/emacs/emacs_mouse_wheel_config.html
-    (define-key map (kbd "<mouse-4>") 'diff-hl-popup--up)
-    (define-key map (kbd "<wheel-up>") 'diff-hl-popup--up)
-    (define-key map (kbd "<mouse-5>") 'diff-hl-popup--down)
-    (define-key map (kbd "<wheel-down>") 'diff-hl-popup--down)
+    (define-key map (kbd "<mouse-4>") 'diff-hl-show-hunk--popup-up)
+    (define-key map (kbd "<wheel-up>") 'diff-hl-show-hunk--popup-up)
+    (define-key map (kbd "<mouse-5>") 'diff-hl-show-hunk--popup-down)
+    (define-key map (kbd "<wheel-down>") 'diff-hl-show-hunk--popup-down)
     
     map)
-  "Keymap for command `diff-hl-popup-transient-mode'.
+  "Keymap for command `diff-hl-show-hunk--popup-transient-mode'.
 Capture all the vertical movement of the point, and converts it
 to scroll in the popup")
 
-(define-minor-mode diff-hl-popup-transient-mode
+(define-minor-mode diff-hl-show-hunk--popup-transient-mode
   "Temporal minor mode to control diff-hl popup."
 
   :global nil
   :group diff-hl-show-hunk-group
   
-  (message "diff-hl-popup-transient-mode:%s" diff-hl-popup-transient-mode)
+  (message "diff-hl-show-hunk--popup-transient-mode:%s" diff-hl-show-hunk--popup-transient-mode)
   
-  (remove-hook 'post-command-hook #'diff-hl-popup--post-command-hook nil)
-  (when diff-hl-popup-transient-mode
-    (add-hook 'post-command-hook #'diff-hl-popup--post-command-hook nil)))
+  (remove-hook 'post-command-hook #'diff-hl-show-hunk--popup-post-command-hook nil)
+  (when diff-hl-show-hunk--popup-transient-mode
+    (add-hook 'post-command-hook #'diff-hl-show-hunk--popup-post-command-hook nil)))
 
-(defun diff-hl-popup--post-command-hook ()
+(defun diff-hl-show-hunk--popup-post-command-hook ()
   "Called each time the region is changed."
   (let ((allowed-command (or
                           (diff-hl-show-hunk-ignorable-command-p this-command)
                           (string-match-p "diff-hl-" (symbol-name this-command)))))
     (message "this-command:%s %s" this-command  allowed-command)
     (unless allowed-command
-      (diff-hl-popup--hide))))
+      (diff-hl-show-hunk--popup-hide))))
 
 
 
 (defun diff-hl-show-hunk-popup (buffer line)
   "Implementation to show the hunk in a posframe.  BUFFER is a buffer with the hunk, and the central line should be LINE."
-
-  (when diff-hl-popup
-    (popup-hide diff-hl-popup))
   
-  (let ((popup (popup-tip buffer :scroll-bar t :nowait t )))
-    (setq diff-hl-popup popup)
+  (unless (featurep 'popup)
+    (error "Required package for diff-hl-show-hunk-popup not available: popup.  Please customize diff-hl-show-hunk-function"))
+
+  (require 'popup)
+  
+  (diff-hl-show-hunk--popup-hide)
+  
+  (let* ((lines (split-string (with-current-buffer buffer (buffer-string)) "[\n\r]+" ))
+         (popup (popup-create (point) 80 20  :around t :scroll-bar t))
+         (line (max 0 (- line 1)))
+         (clicked-line (propertize (nth line lines) 'face 'diff-hl-show-hunk-clicked-line-face)))
+    (setq diff-hl-show-hunk--popup popup)
+    (setcar (nthcdr line lines) clicked-line)
+    (popup-set-list popup lines)
     (popup-scroll-down popup line)
     (popup-select popup line)
-    (diff-hl-popup-transient-mode)
+    (popup-draw popup)
+    (diff-hl-show-hunk--popup-transient-mode)
     (message "popup shown")
     ))
 
 (defun diff-hl-show-hunk-posframe (buffer line)
   "Implementation to show the hunk in a posframe.  BUFFER is a buffer with the hunk, and the central line should be LINE."
+
+  (unless (featurep 'posframe)
+    (error "Required package for diff-hl-show-hunk-posframe not available: posframe.  Please customize diff-hl-show-hunk-function"))
+
+  (require 'posframe)
+
   (setq posframe-mouse-banish nil)
   (setq
    diff-hl-show-hunk-frame
@@ -304,13 +321,10 @@ If not, it fallbacks to `diff-hl-diff-goto-hunk`."
 By default, the posframe shows only the current hunk, and the line of the hunk that matches the current position is highlighted.
 The posframe face, border and other visual preferences are customizable.
 The posframe can be also invoked with the command `diff-hl-show-hunk`"
-  :group diff-hl-show-hunk-group
-
-  (unless (and (featurep 'diff-hl) (featurep 'posframe) )
-    (error "Required packages not available: diff-hl-show-hunk-mode needs diff-hl and posframe")))
+  :group diff-hl-show-hunk-group)
 
 ;;;###autoload
-(define-globalized-minor-mode diff-hl-show-hunk-global-mode
+(define-globalized-minor-mode global-diff-hl-show-hunk-mode
   diff-hl-show-hunk-mode
   diff-hl-show-hunk-mode)
 
