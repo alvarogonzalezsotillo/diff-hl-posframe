@@ -3,7 +3,7 @@
 
 ;; Author:   Álvaro González Sotillo <alvarogonzalezsotillo@gmail.com>
 ;; URL:      https://github.com/alvarogonzalezsotillo/diff-hl-show-hunk.
-;; Keywords: vc, diff, diff-hl, posframe
+;; Keywords: vc, diff, diff-hl, posframe, popup
 ;; Version:  1.0
 ;; Package-Requires: ((diff-hl "1.8.7") (posframe "0.8.0"))
 
@@ -73,6 +73,8 @@
   "The frame parameters used by helm-posframe."
   :type 'string)
 
+
+
 (defcustom diff-hl-show-hunk-function 'diff-hl-show-hunk-function-default
   "The function used to reder the hunk.
 The function receives as first parameter a buffer with the
@@ -102,7 +104,9 @@ are some built in funcions: `diff-hl-show-hunk-function-default',
     (let* ((ignore-command-p (diff-hl-show-hunk-ignorable-command-p this-command))
            (command-in-posframe-p (eq last-event-frame diff-hl-show-hunk--frame))
            (keep-open-p (or command-in-posframe-p ignore-command-p)))
-      (not keep-open-p))))
+      (diff-hl-show-hunk--log "hide-handler:%s %s" this-command command-in-posframe-p)
+      (not keep-open-p)
+      nil)))
 
 
 (defun diff-hl-show-hunk-buffer ()
@@ -223,6 +227,31 @@ Returns a list with the buffer and the line number of the clicked line."
 Capture all the vertical movement of the point, and converts it
 to scroll in the popup")
 
+
+(defvar diff-hl-show-hunk--posframe-transient-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "<prior>") 'diff-hl-show-hunk--posframe-pageup)
+    (define-key map (kbd "M-v") 'diff-hl-show-hunk--posframe-pageup)
+    (define-key map (kbd "<next>") 'diff-hl-show-hunk--posframe-pagedown)
+    (define-key map (kbd "C-v") 'diff-hl-show-hunk--posframe-pagedown)
+    (define-key map (kbd "<up>") 'diff-hl-show-hunk--posframe-up)
+    (define-key map (kbd "C-p") 'diff-hl-show-hunk--posframe-up)
+    (define-key map (kbd "<down>") 'diff-hl-show-hunk--posframe-down)
+    (define-key map (kbd "C-n") 'diff-hl-show-hunk--posframe-down)
+    (define-key map (kbd "C-g") 'diff-hl-show-hunk--posframe-hide)
+    (define-key map [escape] 'diff-hl-show-hunk--posframe-hide)
+    ;;http://ergoemacs.org/emacs/emacs_mouse_wheel_config.html
+    (define-key map (kbd "<mouse-4>") 'diff-hl-show-hunk--posframe-up)
+    (define-key map (kbd "<wheel-up>") 'diff-hl-show-hunk--posframe-up)
+    (define-key map (kbd "<mouse-5>") 'diff-hl-show-hunk--posframe-down)
+    (define-key map (kbd "<wheel-down>") 'diff-hl-show-hunk--posframe-down)
+    
+    map)
+  "Keymap for command `diff-hl-show-hunk--posframe-transient-mode'.
+Capture all the vertical movement of the point, and converts it
+to scroll in the posframe")
+
+
 (define-minor-mode diff-hl-show-hunk--popup-transient-mode
   "Temporal minor mode to control diff-hl popup."
 
@@ -235,6 +264,22 @@ to scroll in the popup")
   (when diff-hl-show-hunk--popup-transient-mode
     (add-hook 'post-command-hook #'diff-hl-show-hunk--popup-post-command-hook nil)))
 
+
+
+(define-minor-mode diff-hl-show-hunk--posframe-transient-mode
+  "Temporal minor mode to control diff-hl posframe."
+
+  :global nil
+  :group diff-hl-show-hunk-group
+  
+  (diff-hl-show-hunk--log "diff-hl-show-hunk--posframe-transient-mode:%s" diff-hl-show-hunk--posframe-transient-mode)
+  
+  (remove-hook 'post-command-hook #'diff-hl-show-hunk--posframe-post-command-hook nil)
+  (when diff-hl-show-hunk--posframe-transient-mode
+    (add-hook 'post-command-hook #'diff-hl-show-hunk--posframe-post-command-hook nil)))
+
+
+
 (defun diff-hl-show-hunk--popup-post-command-hook ()
   "Called each time the region is changed."
   (let ((allowed-command (or
@@ -243,6 +288,16 @@ to scroll in the popup")
     (diff-hl-show-hunk--log "this-command:%s %s" this-command  allowed-command)
     (unless allowed-command
       (diff-hl-show-hunk--popup-hide))))
+
+
+(defun diff-hl-show-hunk--posframe-post-command-hook ()
+  "Called each time the region is changed."
+  (let ((allowed-command (or
+                          (diff-hl-show-hunk-ignorable-command-p this-command)
+                          (string-match-p "diff-hl-" (symbol-name this-command)))))
+    (diff-hl-show-hunk--log "this-command:%s %s" this-command  allowed-command)
+    (unless allowed-command
+      (diff-hl-show-hunk--posframe-hide))))
 
 
 
@@ -297,10 +352,12 @@ to scroll in the popup")
                   :position (point)
                   :poshandler diff-hl-show-hunk-posframe-poshandler
                   :internal-border-width diff-hl-show-hunk-posframe-internal-border-width
-                  :accept-focus  nil
+                  :accept-focus  t
                   :internal-border-color diff-hl-show-hunk-posframe-internal-border-color ; Doesn't always work, better define internal-border face
                   :hidehandler 'diff-hl-show-hunk--hide-handler
-                  :respect-header-line t
+                  :respect-header-line nil
+                  :respect-tab-line nil
+                  :respect-mode-line nil
                   :override-parameters diff-hl-show-hunk-posframe-parameters))
 
   ;; Recenter arround point
@@ -344,3 +401,88 @@ The posframe can be also invoked with the command `diff-hl-show-hunk`"
 
 (provide 'diff-hl-show-hunk)
 ;;; diff-hl-show-hunk.el ends here
+
+;; Lorem ipsum dolor sit amet, consectetuer adipiscing elit.
+;;   Donec hendrerit tempor tellus.
+;;   Donec pretium posuere tellus.
+;;   Proin quam nisl, tincidunt et, mattis eget, convallis nec, purus.
+;;   Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus.
+;;   Nulla posuere.
+;;   Donec vitae dolor.
+;;   Nullam tristique diam non turpis.
+;;   Cras placerat accumsan nulla.
+;;   Nullam rutrum.
+;;   Nam vestibulum accumsan nisl.
+
+;; Pellentesque dapibus suscipit ligula.
+;;   Donec posuere augue in quam.
+;;   Etiam vel tortor sodales tellus ultricies commodo.
+;;   Suspendisse potenti.
+;;   Aenean in sem ac leo mollis blandit.
+;;   Donec neque quam, dignissim in, mollis nec, sagittis eu, wisi.
+;;   Phasellus lacus.
+;;   Etiam laoreet quam sed arcu.
+;;   Phasellus at dui in ligula mollis ultricies.
+;;   Integer placerat tristique nisl.
+;;   Praesent augue.
+;;   Fusce commodo.
+;;   Vestibulum convallis, lorem a tempus semper, dui dui euismod elit, vitae placerat urna tortor vitae lacus.
+;;   Nullam libero mauris, consequat quis, varius et, dictum id, arcu.
+;;   Mauris mollis tincidunt felis.
+;;   Aliquam feugiat tellus ut neque.
+;;   Nulla facilisis, risus a rhoncus fermentum, tellus tellus lacinia purus, et dictum nunc justo sit amet elit.
+
+
+;; Lorem ipsum dolor sit amet, consectetuer adipiscing elit.
+;;   Donec hendrerit tempor tellus.
+;;   Donec pretium posuere tellus.
+;;   Proin quam nisl, tincidunt et, mattis eget, convallis nec, purus.
+;;   Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus.
+;;   Nulla posuere.
+;;   Donec vitae dolor.
+;;   Nullam tristique diam non turpis.
+;;   Cras placerat accumsan nulla.
+;;   Nullam rutrum.
+;;   Nam vestibulum accumsan nisl.
+
+
+;; Pellentesque dapibus suscipit ligula.
+;;   Donec posuere augue in quam.
+;;   Etiam vel tortor sodales tellus ultricies commodo.
+;;   Suspendisse potenti.
+;;   Aenean in sem ac leo mollis blandit.
+;;   Donec neque quam, dignissim in, mollis nec, sagittis eu, wisi.
+;;   Phasellus lacus.
+;;   Etiam laoreet quam sed arcu.
+;;   Phasellus at dui in ligula mollis ultricies.
+;;   Integer placerat tristique nisl.
+;;   Praesent augue.
+;;   Fusce commodo.
+;;   Vestibulum convallis, lorem a tempus semper, dui dui euismod elit, vitae placerat urna tortor vitae lacus.
+;;   Nullam libero mauris, consequat quis, varius et, dictum id, arcu.
+;;   Mauris mollis tincidunt felis.
+;;   Aliquam feugiat tellus ut neque.
+;;   Nulla facilisis, risus a rhoncus fermentum, tellus tellus lacinia purus, et dictum nunc justo sit amet elit.
+
+
+;; Pellentesque dapibus suscipit ligula.
+;;   Donec posuere augue in quam.
+;;   Etiam vel tortor sodales tellus ultricies commodo.
+;;   Suspendisse potenti.
+;;   Aenean in sem ac leo mollis blandit.
+;;   Donec neque quam, dignissim in, mollis nec, sagittis eu, wisi.
+;;   Phasellus lacus.
+;;   Etiam laoreet quam sed arcu.
+;;   Phasellus at dui in ligula mollis ultricies.
+;;   Integer placerat tristique nisl.
+;;   Praesent augue.
+;;   Fusce commodo.
+;;   Vestibulum convallis, lorem a tempus semper, dui dui euismod elit, vitae placerat urna tortor vitae lacus.
+;;   Nullam libero mauris, consequat quis, varius et, dictum id, arcu.
+;;   Mauris mollis tincidunt felis.
+;;   Aliquam feugiat tellus ut neque.
+;;   Nulla facilisis, risus a rhoncus fermentum, tellus tellus lacinia purus, et dictum nunc justo sit amet elit.
+
+
+
+
