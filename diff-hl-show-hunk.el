@@ -9,10 +9,13 @@
 
 ;;; Commentary:
 
-;; `diff-hl-show-hunk-mode' shows a posframe/tooltip with the current
-;; modified hunk when clicking in the margin or the fringe.  It
-;; fallbacks to `diff-hl-diff-goto-hunk' if there is not a
-;; `diff-hl-show-hunk-function` defined
+;; `diff-hl-show-hunk' shows a posframe/tooltip with the modified hunk
+;; at point.  `diff-hl-show-hunk-function' contains the backend used
+;; to show the hunk.  It fallbacks to `diff-hl-diff-goto-hunk' if
+;; there is not a `diff-hl-show-hunk-function' defined.
+
+;; `diff-hl-show-hunk-mode' shows the posframe/tooltip when clicking
+;; in the margin or the fringe.
 
 ;;
 ;; To use it in all buffers:
@@ -28,7 +31,8 @@
 (require 'diff-hl)
 
 (defun diff-hl-show-hunk--log (&rest args)
-  (apply 'message args))
+  ;;(apply 'message args)
+  nil)
 
 
 (defvar diff-hl-show-hunk-mode-map
@@ -79,9 +83,11 @@
   "The function used to reder the hunk.
 The function receives as first parameter a buffer with the
 contents of the hunk, and as second parameter the line number
-corresponding to the clicked line in the original buffer.  There
-are some built in funcions: `diff-hl-show-hunk-function-default',
-`diff-hl-show-hunk-popup' and `diff-hl-show-hunk-posframe'"
+corresponding to the clicked line in the original buffer.  The
+function should return t if the hunk is show, or nil if not.
+There are some built in funcions:
+`diff-hl-show-hunk-function-default', `diff-hl-show-hunk-popup'
+and `diff-hl-show-hunk-posframe'"
   :type 'function)
 
 (defface diff-hl-show-hunk-clicked-line-face
@@ -228,28 +234,36 @@ Capture all the vertical movement of the point, and converts it
 to scroll in the popup")
 
 
-(defvar diff-hl-show-hunk--posframe-transient-mode-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "<prior>") 'diff-hl-show-hunk--posframe-pageup)
-    (define-key map (kbd "M-v") 'diff-hl-show-hunk--posframe-pageup)
-    (define-key map (kbd "<next>") 'diff-hl-show-hunk--posframe-pagedown)
-    (define-key map (kbd "C-v") 'diff-hl-show-hunk--posframe-pagedown)
-    (define-key map (kbd "<up>") 'diff-hl-show-hunk--posframe-up)
-    (define-key map (kbd "C-p") 'diff-hl-show-hunk--posframe-up)
-    (define-key map (kbd "<down>") 'diff-hl-show-hunk--posframe-down)
-    (define-key map (kbd "C-n") 'diff-hl-show-hunk--posframe-down)
-    (define-key map (kbd "C-g") 'diff-hl-show-hunk--posframe-hide)
-    (define-key map [escape] 'diff-hl-show-hunk--posframe-hide)
-    ;;http://ergoemacs.org/emacs/emacs_mouse_wheel_config.html
-    (define-key map (kbd "<mouse-4>") 'diff-hl-show-hunk--posframe-up)
-    (define-key map (kbd "<wheel-up>") 'diff-hl-show-hunk--posframe-up)
-    (define-key map (kbd "<mouse-5>") 'diff-hl-show-hunk--posframe-down)
-    (define-key map (kbd "<wheel-down>") 'diff-hl-show-hunk--posframe-down)
-    
-    map)
-  "Keymap for command `diff-hl-show-hunk--posframe-transient-mode'.
-Capture all the vertical movement of the point, and converts it
-to scroll in the posframe")
+(defun diff-hl-show-hunk--posframe-up ()
+  (interactive)
+  (when (frame-visible-p diff-hl-show-hunk--frame)
+    (with-current-buffer diff-hl-show-hunk-buffer-name
+      (previous-line))))
+
+(defun diff-hl-show-hunk--posframe-pageup ()
+  (interactive)
+  (when (frame-visible-p diff-hl-show-hunk--frame)
+    (with-current-buffer diff-hl-show-hunk-buffer-name
+      (scroll-up))))
+
+(defun diff-hl-show-hunk--posframe-pagedown ()
+  (interactive)
+  (when (frame-visible-p diff-hl-show-hunk--frame)
+    (with-current-buffer diff-hl-show-hunk-buffer-name
+      (scroll-down))))
+
+(defun diff-hl-show-hunk--posframe-down ()
+  (interactive)
+  (when (frame-visible-p diff-hl-show-hunk--frame)
+    (with-current-buffer diff-hl-show-hunk-buffer-name
+      (next-line))))
+
+(defun diff-hl-show-hunk--posframe-hide ()
+  (interactive)
+  (diff-hl-show-hunk--posframe-transient-mode -1)
+  (when (frame-live-p diff-hl-show-hunk--frame)
+    (make-frame-invisible diff-hl-show-hunk--frame)))
+
 
 
 (define-minor-mode diff-hl-show-hunk--popup-transient-mode
@@ -258,7 +272,7 @@ to scroll in the posframe")
   :global nil
   :group diff-hl-show-hunk-group
   
-  (diff-hl-show-hunk--log "diff-hl-show-hunk--popup-transient-mode:%s" diff-hl-show-hunk--popup-transient-mode)
+  ;;(diff-hl-show-hunk--log "diff-hl-show-hunk--popup-transient-mode:%s" diff-hl-show-hunk--popup-transient-mode)
   
   (remove-hook 'post-command-hook #'diff-hl-show-hunk--popup-post-command-hook nil)
   (when diff-hl-show-hunk--popup-transient-mode
@@ -285,17 +299,18 @@ to scroll in the posframe")
   (let ((allowed-command (or
                           (diff-hl-show-hunk-ignorable-command-p this-command)
                           (string-match-p "diff-hl-" (symbol-name this-command)))))
-    (diff-hl-show-hunk--log "this-command:%s %s" this-command  allowed-command)
+    ;;(diff-hl-show-hunk--log "this-command:%s %s" this-command  allowed-command)
     (unless allowed-command
       (diff-hl-show-hunk--popup-hide))))
 
 
 (defun diff-hl-show-hunk--posframe-post-command-hook ()
-  "Called each time the region is changed."
+  "Called for each command while in `diff-hl-show-hunk--posframe-transient-mode."
   (let ((allowed-command (or
                           (diff-hl-show-hunk-ignorable-command-p this-command)
+                          (eq last-event-frame diff-hl-show-hunk--frame)
                           (string-match-p "diff-hl-" (symbol-name this-command)))))
-    (diff-hl-show-hunk--log "this-command:%s %s" this-command  allowed-command)
+    (diff-hl-show-hunk--log "posframe post-command-hook: this-command:%s allowed-command:%s frame:%s  posframe:%s" this-command  allowed-command last-event-frame diff-hl-show-hunk--frame)
     (unless allowed-command
       (diff-hl-show-hunk--posframe-hide))))
 
@@ -367,8 +382,11 @@ to scroll in the posframe")
       (forward-line (1- line))
       (select-window (window-main-window diff-hl-show-hunk--frame))
       (recenter)))
+  (select-frame diff-hl-show-hunk--frame)
+  (diff-hl-show-hunk--posframe-transient-mode)
   t)
 
+;;;###autoload
 (defun diff-hl-show-hunk ()
   "Show a the diffs with vc last version in a posframe, if available.
 If not, it fallbacks to `diff-hl-diff-goto-hunk`."
@@ -401,88 +419,3 @@ The posframe can be also invoked with the command `diff-hl-show-hunk`"
 
 (provide 'diff-hl-show-hunk)
 ;;; diff-hl-show-hunk.el ends here
-
-;; Lorem ipsum dolor sit amet, consectetuer adipiscing elit.
-;;   Donec hendrerit tempor tellus.
-;;   Donec pretium posuere tellus.
-;;   Proin quam nisl, tincidunt et, mattis eget, convallis nec, purus.
-;;   Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus.
-;;   Nulla posuere.
-;;   Donec vitae dolor.
-;;   Nullam tristique diam non turpis.
-;;   Cras placerat accumsan nulla.
-;;   Nullam rutrum.
-;;   Nam vestibulum accumsan nisl.
-
-;; Pellentesque dapibus suscipit ligula.
-;;   Donec posuere augue in quam.
-;;   Etiam vel tortor sodales tellus ultricies commodo.
-;;   Suspendisse potenti.
-;;   Aenean in sem ac leo mollis blandit.
-;;   Donec neque quam, dignissim in, mollis nec, sagittis eu, wisi.
-;;   Phasellus lacus.
-;;   Etiam laoreet quam sed arcu.
-;;   Phasellus at dui in ligula mollis ultricies.
-;;   Integer placerat tristique nisl.
-;;   Praesent augue.
-;;   Fusce commodo.
-;;   Vestibulum convallis, lorem a tempus semper, dui dui euismod elit, vitae placerat urna tortor vitae lacus.
-;;   Nullam libero mauris, consequat quis, varius et, dictum id, arcu.
-;;   Mauris mollis tincidunt felis.
-;;   Aliquam feugiat tellus ut neque.
-;;   Nulla facilisis, risus a rhoncus fermentum, tellus tellus lacinia purus, et dictum nunc justo sit amet elit.
-
-
-;; Lorem ipsum dolor sit amet, consectetuer adipiscing elit.
-;;   Donec hendrerit tempor tellus.
-;;   Donec pretium posuere tellus.
-;;   Proin quam nisl, tincidunt et, mattis eget, convallis nec, purus.
-;;   Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus.
-;;   Nulla posuere.
-;;   Donec vitae dolor.
-;;   Nullam tristique diam non turpis.
-;;   Cras placerat accumsan nulla.
-;;   Nullam rutrum.
-;;   Nam vestibulum accumsan nisl.
-
-
-;; Pellentesque dapibus suscipit ligula.
-;;   Donec posuere augue in quam.
-;;   Etiam vel tortor sodales tellus ultricies commodo.
-;;   Suspendisse potenti.
-;;   Aenean in sem ac leo mollis blandit.
-;;   Donec neque quam, dignissim in, mollis nec, sagittis eu, wisi.
-;;   Phasellus lacus.
-;;   Etiam laoreet quam sed arcu.
-;;   Phasellus at dui in ligula mollis ultricies.
-;;   Integer placerat tristique nisl.
-;;   Praesent augue.
-;;   Fusce commodo.
-;;   Vestibulum convallis, lorem a tempus semper, dui dui euismod elit, vitae placerat urna tortor vitae lacus.
-;;   Nullam libero mauris, consequat quis, varius et, dictum id, arcu.
-;;   Mauris mollis tincidunt felis.
-;;   Aliquam feugiat tellus ut neque.
-;;   Nulla facilisis, risus a rhoncus fermentum, tellus tellus lacinia purus, et dictum nunc justo sit amet elit.
-
-
-;; Pellentesque dapibus suscipit ligula.
-;;   Donec posuere augue in quam.
-;;   Etiam vel tortor sodales tellus ultricies commodo.
-;;   Suspendisse potenti.
-;;   Aenean in sem ac leo mollis blandit.
-;;   Donec neque quam, dignissim in, mollis nec, sagittis eu, wisi.
-;;   Phasellus lacus.
-;;   Etiam laoreet quam sed arcu.
-;;   Phasellus at dui in ligula mollis ultricies.
-;;   Integer placerat tristique nisl.
-;;   Praesent augue.
-;;   Fusce commodo.
-;;   Vestibulum convallis, lorem a tempus semper, dui dui euismod elit, vitae placerat urna tortor vitae lacus.
-;;   Nullam libero mauris, consequat quis, varius et, dictum id, arcu.
-;;   Mauris mollis tincidunt felis.
-;;   Aliquam feugiat tellus ut neque.
-;;   Nulla facilisis, risus a rhoncus fermentum, tellus tellus lacinia purus, et dictum nunc justo sit amet elit.
-
-
-
-
