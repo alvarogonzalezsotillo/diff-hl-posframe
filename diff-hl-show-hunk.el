@@ -48,7 +48,7 @@
 (defvar diff-hl-show-hunk--frame nil "The postframe frame used in function `diff-hl-show-hunk-posframe'.")
 
 (defgroup diff-hl-show-hunk-group nil
-  "Show vc diffs in a posframe."
+  "Show vc diffs in a posframe or popup."
   :group 'convenience)
 
 (defcustom diff-hl-show-hunk-boundary "^@@.*@@"
@@ -279,12 +279,20 @@ to scroll in the popup")
     (add-hook 'post-command-hook #'diff-hl-show-hunk--popup-post-command-hook nil)))
 
 
+(defvar diff-hl-show-hunk--posframe-transient-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-g") 'diff-hl-show-hunk--posframe-hide)
+    (define-key map [escape] 'diff-hl-show-hunk--posframe-hide)
+    map)
+  "Keymap for command `diff-hl-show-hunk--posframe-transient-mode'.
+Capture all the vertical movement of the point, and converts it
+to scroll in the posframe")
+
 
 (define-minor-mode diff-hl-show-hunk--posframe-transient-mode
   "Temporal minor mode to control diff-hl posframe."
-
-  :global nil
-  :group diff-hl-show-hunk-group
+  :group 'diff-hl-show-hunk-group
+  :global t
   
   (diff-hl-show-hunk--log "diff-hl-show-hunk--posframe-transient-mode:%s" diff-hl-show-hunk--posframe-transient-mode)
   
@@ -383,7 +391,7 @@ to scroll in the popup")
       (select-window (window-main-window diff-hl-show-hunk--frame))
       (recenter)))
   (select-frame diff-hl-show-hunk--frame)
-  (diff-hl-show-hunk--posframe-transient-mode)
+  (diff-hl-show-hunk--posframe-transient-mode 1)
   t)
 
 ;;;###autoload
@@ -410,7 +418,7 @@ If not, it fallbacks to `diff-hl-diff-goto-hunk`."
 By default, the posframe shows only the current hunk, and the line of the hunk that matches the current position is highlighted.
 The posframe face, border and other visual preferences are customizable.
 The posframe can be also invoked with the command `diff-hl-show-hunk`"
-  :group diff-hl-show-hunk-group)
+  :group 'diff-hl-show-hunk-group)
 
 ;;;###autoload
 (define-globalized-minor-mode global-diff-hl-show-hunk-mode
