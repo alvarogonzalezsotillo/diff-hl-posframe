@@ -27,6 +27,7 @@
 
 
 
+
 (require 'posframe)
 (require 'diff-hl)
 
@@ -123,7 +124,7 @@ Returns a list with the buffer and the line number of the clicked line."
   (let ((content)
         (point-in-buffer)
         (line)
-        (overlay)
+        (line-overlay)
         (inhibit-redisplay t) ;;https://emacs.stackexchange.com/questions/35680/stop-emacs-from-updating-display
         (buffer (get-buffer-create diff-hl-show-hunk-buffer-name)))
     
@@ -133,27 +134,31 @@ Returns a list with the buffer and the line number of the clicked line."
       (save-excursion
         (diff-hl-diff-goto-hunk)
         (with-current-buffer "*vc-diff*"
-          (setq content (buffer-string))
+          (setq content (buffer-substring-no-properties (point-min) (point-max)))
           (setq point-in-buffer (point)))))
 
     (with-current-buffer buffer
-
+      (read-only-mode -1)
       (erase-buffer)
       (insert content)
       
       ;; Highlight the clicked line
       (goto-char point-in-buffer)
-      (setq overlay (make-overlay (point-at-bol) (min (point-max) (1+ (point-at-eol)))))
-      (overlay-put overlay 'face 'diff-hl-show-hunk-clicked-line-face)
+      (setq line-overlay (make-overlay (point-at-bol) (min (point-max) (1+ (point-at-eol)))))
+      (overlay-put line-overlay 'face 'diff-hl-show-hunk-clicked-line-face)
       
       ;; diff-mode, highlight hunks boundaries
       (diff-mode)
       (highlight-regexp diff-hl-show-hunk-boundary)
+      (read-only-mode 1)
+
+      ;; put an overlay to override read-only-mode keymap
+      (let ((full-overlay (make-overlay 1 (1+ (buffer-size)))))
+        (overlay-put full-overlay 'keymap diff-hl-show-hunk--posframe-transient-mode-map))
       
 
       ;; Change face size
       (buffer-face-set 'diff-hl-show-hunk-face)
-      
 
       ;;  Find the hunk and narrow to it
       (when diff-hl-show-hunk-narrow
@@ -164,12 +169,14 @@ Returns a list with the buffer and the line number of the clicked line."
           (move-beginning-of-line nil)
           (narrow-to-region start (point)))
         ;; Come back to the clicked line
-        (goto-char (overlay-start overlay)))
+        (goto-char (overlay-start line-overlay)))
       
 
       (setq line (line-number-at-pos)))
     
     (list buffer line)))
+
+
 
 
 (defun diff-hl-show-hunk--click (event)
@@ -222,6 +229,7 @@ Returns a list with the buffer and the line number of the clicked line."
     (define-key map (kbd "C-n") 'diff-hl-show-hunk--popup-down)
     (define-key map (kbd "C-g") 'diff-hl-show-hunk--popup-hide)
     (define-key map [escape] 'diff-hl-show-hunk--popup-hide)
+    (define-key map (kbd "q") 'diff-hl-show-hunk--popup-hide)
     ;;http://ergoemacs.org/emacs/emacs_mouse_wheel_config.html
     (define-key map (kbd "<mouse-4>") 'diff-hl-show-hunk--popup-up)
     (define-key map (kbd "<wheel-up>") 'diff-hl-show-hunk--popup-up)
@@ -260,6 +268,7 @@ to scroll in the popup")
 
 (defun diff-hl-show-hunk--posframe-hide ()
   (interactive)
+  (diff-hl-show-hunk--log "diff-hl-show-hunk--posframe-hide")
   (diff-hl-show-hunk--posframe-transient-mode -1)
   (when (frame-live-p diff-hl-show-hunk--frame)
     (make-frame-invisible diff-hl-show-hunk--frame)))
@@ -283,6 +292,7 @@ to scroll in the popup")
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-g") 'diff-hl-show-hunk--posframe-hide)
     (define-key map [escape] 'diff-hl-show-hunk--posframe-hide)
+    (define-key map (kbd "q") 'diff-hl-show-hunk--posframe-hide)
     map)
   "Keymap for command `diff-hl-show-hunk--posframe-transient-mode'.
 Capture all the vertical movement of the point, and converts it
@@ -307,19 +317,22 @@ to scroll in the posframe")
   (let ((allowed-command (or
                           (diff-hl-show-hunk-ignorable-command-p this-command)
                           (string-match-p "diff-hl-" (symbol-name this-command)))))
-    ;;(diff-hl-show-hunk--log "this-command:%s %s" this-command  allowed-command)
+    (diff-hl-show-hunk--log "this-command:%s %s" this-command  allowed-command)
     (unless allowed-command
       (diff-hl-show-hunk--popup-hide))))
 
 
 (defun diff-hl-show-hunk--posframe-post-command-hook ()
   "Called for each command while in `diff-hl-show-hunk--posframe-transient-mode."
-  (let ((allowed-command (or
-                          (diff-hl-show-hunk-ignorable-command-p this-command)
-                          (eq last-event-frame diff-hl-show-hunk--frame)
-                          (string-match-p "diff-hl-" (symbol-name this-command)))))
-    (diff-hl-show-hunk--log "posframe post-command-hook: this-command:%s allowed-command:%s frame:%s  posframe:%s" this-command  allowed-command last-event-frame diff-hl-show-hunk--frame)
-    (unless allowed-command
+  (let* ((allowed-command (or
+                           (diff-hl-show-hunk-ignorable-command-p this-command)
+                           (and (symbolp this-command) (string-match-p "diff-hl-" (symbol-name this-command)))))
+         (event-in-frame (eq last-event-frame diff-hl-show-hunk--frame))
+         (has-focus (eq (frame-focus-state diff-hl-show-hunk--frame) t))
+         (still-visible (or event-in-frame allowed-command has-focus)))
+    (diff-hl-show-hunk--log "post-command-hook: this-command:%s allowed-command:%s event-in-frame:%s has-focus:%s"
+             this-command allowed-command event-in-frame has-focus)
+    (unless still-visible
       (diff-hl-show-hunk--posframe-hide))))
 
 
@@ -378,7 +391,7 @@ to scroll in the posframe")
                   :accept-focus  t
                   :internal-border-color diff-hl-show-hunk-posframe-internal-border-color ; Doesn't always work, better define internal-border face
                   :hidehandler 'diff-hl-show-hunk--hide-handler
-                  :respect-header-line nil
+                  :respect-header-line t
                   :respect-tab-line nil
                   :respect-mode-line nil
                   :override-parameters diff-hl-show-hunk-posframe-parameters))
@@ -386,11 +399,13 @@ to scroll in the posframe")
   ;; Recenter arround point
   (with-selected-frame diff-hl-show-hunk--frame
     (with-current-buffer buffer
+      (setq header-line-format (propertize "Close with `C-g'" ))
       (goto-char (point-min))
       (forward-line (1- line))
+      (setq buffer-quit-function #'diff-hl-show-hunk--posframe-hide)
       (select-window (window-main-window diff-hl-show-hunk--frame))
       (recenter)))
-  (select-frame diff-hl-show-hunk--frame)
+  (select-frame-set-input-focus diff-hl-show-hunk--frame)
   (diff-hl-show-hunk--posframe-transient-mode 1)
   t)
 
