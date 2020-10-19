@@ -285,7 +285,7 @@ to scroll in the popup")
   :global nil
   :group diff-hl-show-hunk-group
   
-  ;;(diff-hl-show-hunk--log "diff-hl-show-hunk--popup-transient-mode:%s" diff-hl-show-hunk--popup-transient-mode)
+  (diff-hl-show-hunk--log "diff-hl-show-hunk--popup-transient-mode:%s" diff-hl-show-hunk--popup-transient-mode)
   
   (remove-hook 'post-command-hook #'diff-hl-show-hunk--popup-post-command-hook nil)
   (when diff-hl-show-hunk--popup-transient-mode
@@ -297,6 +297,8 @@ to scroll in the popup")
     (define-key map (kbd "C-g") 'diff-hl-show-hunk--posframe-hide)
     (define-key map [escape] 'diff-hl-show-hunk--posframe-hide)
     (define-key map (kbd "q") 'diff-hl-show-hunk--posframe-hide)
+    (define-key map (kbd "n") 'ignore) ;; In diff-mode
+    (define-key map (kbd "p") 'ignore) ;; In diff-mode
     map)
   "Keymap for command `diff-hl-show-hunk--posframe-transient-mode'.
 Capture all the vertical movement of the point, and converts it
