@@ -47,6 +47,8 @@
 
 (defvar diff-hl-show-hunk-buffer-name "*diff-hl-show-hunk-buffer*" "Name of the posframe used by diff-hl-show-hunk.")
 (defvar diff-hl-show-hunk--frame nil "The postframe frame used in function `diff-hl-show-hunk-posframe'.")
+(defvar diff-hl-show-hunk--original-frame nil "The frame from which posframe is shown.")
+
 
 (defgroup diff-hl-show-hunk-group nil
   "Show vc diffs in a posframe or popup."
@@ -271,7 +273,8 @@ to scroll in the popup")
   (diff-hl-show-hunk--log "diff-hl-show-hunk--posframe-hide")
   (diff-hl-show-hunk--posframe-transient-mode -1)
   (when (frame-live-p diff-hl-show-hunk--frame)
-    (make-frame-invisible diff-hl-show-hunk--frame)))
+    (make-frame-invisible diff-hl-show-hunk--frame)
+    (select-frame-set-input-focus diff-hl-show-hunk--original-frame)))
 
 
 
@@ -281,7 +284,7 @@ to scroll in the popup")
   :global nil
   :group diff-hl-show-hunk-group
   
-  ;;(diff-hl-show-hunk--log "diff-hl-show-hunk--popup-transient-mode:%s" diff-hl-show-hunk--popup-transient-mode)
+  (diff-hl-show-hunk--log "diff-hl-show-hunk--popup-transient-mode:%s" diff-hl-show-hunk--popup-transient-mode)
   
   (remove-hook 'post-command-hook #'diff-hl-show-hunk--popup-post-command-hook nil)
   (when diff-hl-show-hunk--popup-transient-mode
@@ -330,7 +333,7 @@ to scroll in the posframe")
                            (diff-hl-show-hunk-ignorable-command-p this-command)
                            (and (symbolp this-command) (string-match-p "diff-hl-" (symbol-name this-command)))))
          (event-in-frame (eq last-event-frame diff-hl-show-hunk--frame))
-         (has-focus (eq (frame-focus-state diff-hl-show-hunk--frame) t))
+         (has-focus (and (functionp 'frame-focus-state) (eq (frame-focus-state diff-hl-show-hunk--frame) t)))
          (still-visible (or event-in-frame allowed-command has-focus)))
     (diff-hl-show-hunk--log "post-command-hook: this-command:%s allowed-command:%s event-in-frame:%s has-focus:%s"
              this-command allowed-command event-in-frame has-focus)
@@ -384,6 +387,7 @@ to scroll in the posframe")
   (require 'posframe)
 
   (setq posframe-mouse-banish nil)
+  (setq diff-hl-show-hunk--original-frame last-event-frame)
   (setq
    diff-hl-show-hunk--frame
    (posframe-show buffer
@@ -406,6 +410,7 @@ to scroll in the posframe")
       (forward-line (1- line))
       (setq buffer-quit-function #'diff-hl-show-hunk--posframe-hide)
       (select-window (window-main-window diff-hl-show-hunk--frame))
+      (setq cursor-type 'box)
       (recenter)))
   (select-frame-set-input-focus diff-hl-show-hunk--frame)
   (diff-hl-show-hunk--posframe-transient-mode 1)
