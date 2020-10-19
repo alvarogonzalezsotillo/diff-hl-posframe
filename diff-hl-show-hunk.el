@@ -219,22 +219,22 @@ Returns a list with the buffer and the line number of the clicked line."
 
 (defvar diff-hl-show-hunk--popup-transient-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "<prior>") 'diff-hl-show-hunk--popup-pageup)
-    (define-key map (kbd "M-v") 'diff-hl-show-hunk--popup-pageup)
-    (define-key map (kbd "<next>") 'diff-hl-show-hunk--popup-pagedown)
-    (define-key map (kbd "C-v") 'diff-hl-show-hunk--popup-pagedown)
-    (define-key map (kbd "<up>") 'diff-hl-show-hunk--popup-up)
-    (define-key map (kbd "C-p") 'diff-hl-show-hunk--popup-up)
-    (define-key map (kbd "<down>") 'diff-hl-show-hunk--popup-down)
-    (define-key map (kbd "C-n") 'diff-hl-show-hunk--popup-down)
-    (define-key map (kbd "C-g") 'diff-hl-show-hunk--popup-hide)
-    (define-key map [escape] 'diff-hl-show-hunk--popup-hide)
-    (define-key map (kbd "q") 'diff-hl-show-hunk--popup-hide)
+    (define-key map (kbd "<prior>") #'diff-hl-show-hunk--popup-pageup)
+    (define-key map (kbd "M-v") #'diff-hl-show-hunk--popup-pageup)
+    (define-key map (kbd "<next>") #'diff-hl-show-hunk--popup-pagedown)
+    (define-key map (kbd "C-v") #'diff-hl-show-hunk--popup-pagedown)
+    (define-key map (kbd "<up>") #'diff-hl-show-hunk--popup-up)
+    (define-key map (kbd "C-p") #'diff-hl-show-hunk--popup-up)
+    (define-key map (kbd "<down>") #'diff-hl-show-hunk--popup-down)
+    (define-key map (kbd "C-n") #'diff-hl-show-hunk--popup-down)
+    (define-key map (kbd "C-g") #'diff-hl-show-hunk--popup-hide)
+    (define-key map [escape] #'diff-hl-show-hunk--popup-hide)
+    (define-key map (kbd "q") #'diff-hl-show-hunk--popup-hide)
     ;;http://ergoemacs.org/emacs/emacs_mouse_wheel_config.html
-    (define-key map (kbd "<mouse-4>") 'diff-hl-show-hunk--popup-up)
-    (define-key map (kbd "<wheel-up>") 'diff-hl-show-hunk--popup-up)
-    (define-key map (kbd "<mouse-5>") 'diff-hl-show-hunk--popup-down)
-    (define-key map (kbd "<wheel-down>") 'diff-hl-show-hunk--popup-down)
+    (define-key map (kbd "<mouse-4>") #'diff-hl-show-hunk--popup-up)
+    (define-key map (kbd "<wheel-up>") #'diff-hl-show-hunk--popup-up)
+    (define-key map (kbd "<mouse-5>") #'diff-hl-show-hunk--popup-down)
+    (define-key map (kbd "<wheel-down>") #'diff-hl-show-hunk--popup-down)
     
     map)
   "Keymap for command `diff-hl-show-hunk--popup-transient-mode'.
@@ -290,9 +290,11 @@ to scroll in the popup")
 
 (defvar diff-hl-show-hunk--posframe-transient-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-g") 'diff-hl-show-hunk--posframe-hide)
-    (define-key map [escape] 'diff-hl-show-hunk--posframe-hide)
-    (define-key map (kbd "q") 'diff-hl-show-hunk--posframe-hide)
+    (define-key map (kbd "C-g") #'diff-hl-show-hunk--posframe-hide)
+    (define-key map [escape]    #'diff-hl-show-hunk--posframe-hide)
+    (define-key map (kbd "q")   #'diff-hl-show-hunk--posframe-hide)
+    (define-key map (kbd "n")   #'ignore)
+    (define-key map (kbd "p")   #'ignore)
     map)
   "Keymap for command `diff-hl-show-hunk--posframe-transient-mode'.
 Capture all the vertical movement of the point, and converts it
