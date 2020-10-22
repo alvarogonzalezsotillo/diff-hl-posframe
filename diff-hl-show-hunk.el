@@ -1,11 +1,11 @@
-;;; diff-hl-show-hunk.el --- Integrate posframe/tooltip and diff-hl-diff-goto-hunk -*- lexical-binding: t -*-
+;;; diff-hl-show-hunk.el --- Integrate popup and diff-hl-diff-goto-hunk -*- lexical-binding: t -*-
 
 
 ;; Author:   Álvaro González Sotillo <alvarogonzalezsotillo@gmail.com>
 ;; URL:      https://github.com/alvarogonzalezsotillo/diff-hl-show-hunk.
-;; Keywords: vc, diff, diff-hl, posframe, popup
+;; Keywords: vc, diff, diff-hl, popup
 ;; Version:  1.0
-;; Package-Requires: ((diff-hl "1.8.7") (posframe "0.8.0"))
+;; Package-Requires: ((diff-hl "1.8.7"))
 
 ;;; Commentary:
 
@@ -14,7 +14,7 @@
 ;; to show the hunk.  It fallbacks to `diff-hl-diff-goto-hunk' if
 ;; there is not a `diff-hl-show-hunk-function' defined.
 
-;; `diff-hl-show-hunk-mode' shows the posframe/tooltip when clicking
+;; `diff-hl-show-hunk-mode' shows the posframe/popup when clicking
 ;; in the margin or the fringe.
 
 ;;
@@ -26,12 +26,10 @@
 ;;; Code:
 
 
-
-
-(require 'posframe)
 (require 'diff-hl)
 
-(defun diff-hl-show-hunk--log (&rest args)
+(defun diff-hl-show-hunk--log (&rest _args)
+  "Used for debugging purposes."
   ;;(apply 'message args)
   nil)
 
@@ -104,18 +102,6 @@ and `diff-hl-show-hunk-posframe'"
 (defun diff-hl-show-hunk-ignorable-command-p (command)
   "Decide if COMMAND is a command allowed while showing a posframe or a popup."
   (member command '(ignore diff-hl-show-hunk handle-switch-frame diff-hl-show-hunk--click)))
-
-(defun diff-hl-show-hunk--hide-handler  (_info)
-  "Hide the posframe if the event is outside the posframe (after the posframe has been opened)."
-
-  (if (not (frame-visible-p diff-hl-show-hunk--frame))
-      t
-    (let* ((ignore-command-p (diff-hl-show-hunk-ignorable-command-p this-command))
-           (command-in-posframe-p (eq last-event-frame diff-hl-show-hunk--frame))
-           (keep-open-p (or command-in-posframe-p ignore-command-p)))
-      (diff-hl-show-hunk--log "hide-handler:%s %s" this-command command-in-posframe-p)
-      (not keep-open-p)
-      nil)))
 
 
 (defun diff-hl-show-hunk-buffer ()
@@ -293,9 +279,9 @@ to scroll in the popup")
 
 (defvar diff-hl-show-hunk--posframe-transient-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-g") #'diff-hl-show-hunk--posframe-hide)
     (define-key map [escape]    #'diff-hl-show-hunk--posframe-hide)
     (define-key map (kbd "q")   #'diff-hl-show-hunk--posframe-hide)
+    (define-key map (kbd "C-g") #'diff-hl-show-hunk--posframe-hide)
     (define-key map (kbd "n")   #'ignore)
     (define-key map (kbd "p")   #'ignore)
     map)
@@ -333,7 +319,7 @@ to scroll in the posframe")
                            (diff-hl-show-hunk-ignorable-command-p this-command)
                            (and (symbolp this-command) (string-match-p "diff-hl-" (symbol-name this-command)))))
          (event-in-frame (eq last-event-frame diff-hl-show-hunk--frame))
-         (has-focus (and (functionp 'frame-focus-state) (eq (frame-focus-state diff-hl-show-hunk--frame) t)))
+         (has-focus (and (frame-live-p diff-hl-show-hunk--frame)(functionp 'frame-focus-state) (eq (frame-focus-state diff-hl-show-hunk--frame) t)))
          (still-visible (or event-in-frame allowed-command has-focus)))
     (diff-hl-show-hunk--log "post-command-hook: this-command:%s allowed-command:%s event-in-frame:%s has-focus:%s"
              this-command allowed-command event-in-frame has-focus)
@@ -349,7 +335,6 @@ to scroll in the posframe")
     (error "Required package for diff-hl-show-hunk-popup not available: popup.  Please customize diff-hl-show-hunk-function"))
 
   (require 'popup)
-
   
   (diff-hl-show-hunk--popup-hide)
   
@@ -369,13 +354,50 @@ to scroll in the posframe")
 
 (defun diff-hl-show-hunk-function-default (buffer line)
   "Show a posframe or a popup with the hunk in BUFFER, at  LINE."
-  (cond ((and (featurep 'posframe) (posframe-workable-p))
-         (diff-hl-show-hunk-posframe buffer line))
-        ((featurep 'popup)
-         (diff-hl-show-hunk-popup buffer line))
-        (t
-         nil)))
+  (let* ((posframe-used (when (featurep 'posframe)
+                          (require 'posframe)
+                          (when (posframe-workable-p)
+                            (diff-hl-show-hunk-posframe buffer line))))
+         (popup-used (when (not posframe-used)
+                       (when (featurep 'popup)
+                         (diff-hl-show-hunk-popup buffer line))))
+         (success (or posframe-used popup-used)))
+    (when (not success)
+      (warn "diff-hl-show-hunk: Please install posframe or popup, or customize diff-hl-show-hunk-function"))
+    success))
+                       
 
+(defvar diff-hl-show-hunk-posframe--close-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "<header-line> <mouse-1>")  #'diff-hl-show-hunk--posframe-hide)
+    map)
+  )
+
+(setq diff-hl-show-hunk-posframe--next-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "<header-line> <mouse-1>")
+      (lambda () (interactive) (diff-hl-show-hunk--posframe-hide) (diff-hl-next-hunk) (run-with-timer 0.1 nil #'diff-hl-show-hunk))  )
+    map)
+  )
+
+(setq diff-hl-show-hunk-posframe--previous-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "<header-line> <mouse-1>")
+      (lambda () (interactive) (diff-hl-show-hunk--posframe-hide) (diff-hl-next-hunk) (run-with-timer 0.1 nil #'diff-hl-show-hunk))  )
+    map)
+  )
+
+(defun diff-hl-show-hunk--posframe-button (text help-echo action)
+  (concat
+   " "
+   (propertize (concat " " text " ")
+               'help-echo help-echo
+               'face '(:height 0.7)
+               'mouse-face '(:box (:style released-button))
+               'keymap (let ((map (make-sparse-keymap)))
+                         (define-key map (kbd "<header-line> <mouse-1>") action)
+                         map))
+   " "))
 
 
 (defun diff-hl-show-hunk-posframe (buffer line)
@@ -385,6 +407,8 @@ to scroll in the posframe")
     (error "Required package for diff-hl-show-hunk-posframe not available: posframe.  Please customize diff-hl-show-hunk-function"))
 
   (require 'posframe)
+  (unless (posframe-workable-p)
+    (error "Package posframe is not workable.  Please customize diff-hl-show-hunk-function"))
 
   (setq posframe-mouse-banish nil)
   (setq diff-hl-show-hunk--original-frame last-event-frame)
@@ -395,8 +419,9 @@ to scroll in the posframe")
                   :poshandler diff-hl-show-hunk-posframe-poshandler
                   :internal-border-width diff-hl-show-hunk-posframe-internal-border-width
                   :accept-focus  t
-                  :internal-border-color diff-hl-show-hunk-posframe-internal-border-color ; Doesn't always work, better define internal-border face
-                  :hidehandler 'diff-hl-show-hunk--hide-handler
+                  ;; internal-border-color Doesn't always work, if not customize internal-border face
+                  :internal-border-color diff-hl-show-hunk-posframe-internal-border-color
+                  :hidehandler nil ;'diff-hl-show-hunk--hide-handler
                   :respect-header-line t
                   :respect-tab-line nil
                   :respect-mode-line nil
@@ -405,7 +430,32 @@ to scroll in the posframe")
   ;; Recenter arround point
   (with-selected-frame diff-hl-show-hunk--frame
     (with-current-buffer buffer
-      (setq header-line-format (propertize "Close with `C-g'" ))
+      (setq header-line-format (concat
+                                " "
+                                (propertize " Close "
+                                            'help-echo "Close (\\[diff-hl-show-hunk--posframe-hide])"
+                                            'face '(:height 0.7)
+                                            'mouse-face '(:box (:style released-button))
+                                            'keymap diff-hl-show-hunk-posframe--close-map)
+                                " "
+                                (diff-hl-show-hunk--posframe-button
+                                 "Previous hunk"
+                                 nil
+                                 (lambda ()
+                                   (interactive) (diff-hl-show-hunk--posframe-hide) (diff-hl-previous-hunk) (run-with-timer 0.1 nil #'diff-hl-show-hunk)))
+                                
+                                (diff-hl-show-hunk--posframe-button
+                                 "Next hunk"
+                                 nil
+                                 (lambda ()
+                                   (interactive) (diff-hl-show-hunk--posframe-hide) (diff-hl-next-hunk) (run-with-timer 0.1 nil #'diff-hl-show-hunk)))
+
+                                (diff-hl-show-hunk--posframe-button
+                                 "Revert hunk"
+                                 nil
+                                 (lambda ()
+                                   (interactive) (diff-hl-show-hunk--posframe-hide) (diff-hl-revert-hunk)))))
+
       (goto-char (point-min))
       (forward-line (1- line))
       (setq buffer-quit-function #'diff-hl-show-hunk--posframe-hide)
