@@ -56,6 +56,10 @@
   "Regex that marks the boundary of a hunk in *vc-diff* buffer."
   :type 'string)
 
+(defcustom diff-hl-show-hunk-posframe-show-head-line t
+  "Show some useful buttons at the top of the diff-hl posframe."
+  :type 'boolean)
+
 
 (defcustom diff-hl-show-hunk-posframe-internal-border-width 2
   "Internal border width of the posframe."
@@ -259,9 +263,10 @@ to scroll in the popup")
   (diff-hl-show-hunk--log "diff-hl-show-hunk--posframe-hide")
   (diff-hl-show-hunk--posframe-transient-mode -1)
   (when (frame-live-p diff-hl-show-hunk--frame)
-    (make-frame-invisible diff-hl-show-hunk--frame)
-    (select-frame-set-input-focus diff-hl-show-hunk--original-frame)))
-
+    (make-frame-invisible diff-hl-show-hunk--frame))
+  (when diff-hl-show-hunk--original-frame
+    (select-frame-set-input-focus diff-hl-show-hunk--original-frame)
+    (setq diff-hl-show-hunk--original-frame nil)))
 
 
 (define-minor-mode diff-hl-show-hunk--popup-transient-mode
@@ -410,6 +415,8 @@ to scroll in the posframe")
   (unless (posframe-workable-p)
     (error "Package posframe is not workable.  Please customize diff-hl-show-hunk-function"))
 
+  (diff-hl-show-hunk--posframe-hide)
+
   (setq posframe-mouse-banish nil)
   (setq diff-hl-show-hunk--original-frame last-event-frame)
   (setq
@@ -422,7 +429,7 @@ to scroll in the posframe")
                   ;; internal-border-color Doesn't always work, if not customize internal-border face
                   :internal-border-color diff-hl-show-hunk-posframe-internal-border-color
                   :hidehandler nil ;'diff-hl-show-hunk--hide-handler
-                  :respect-header-line t
+                  :respect-header-line diff-hl-show-hunk-posframe-show-head-line
                   :respect-tab-line nil
                   :respect-mode-line nil
                   :override-parameters diff-hl-show-hunk-posframe-parameters))
@@ -430,31 +437,32 @@ to scroll in the posframe")
   ;; Recenter arround point
   (with-selected-frame diff-hl-show-hunk--frame
     (with-current-buffer buffer
-      (setq header-line-format (concat
-                                " "
-                                (propertize " Close "
-                                            'help-echo "Close (\\[diff-hl-show-hunk--posframe-hide])"
-                                            'face '(:height 0.7)
-                                            'mouse-face '(:box (:style released-button))
-                                            'keymap diff-hl-show-hunk-posframe--close-map)
-                                " "
-                                (diff-hl-show-hunk--posframe-button
-                                 "Previous hunk"
-                                 nil
-                                 (lambda ()
-                                   (interactive) (diff-hl-show-hunk--posframe-hide) (diff-hl-previous-hunk) (run-with-timer 0.1 nil #'diff-hl-show-hunk)))
-                                
-                                (diff-hl-show-hunk--posframe-button
-                                 "Next hunk"
-                                 nil
-                                 (lambda ()
-                                   (interactive) (diff-hl-show-hunk--posframe-hide) (diff-hl-next-hunk) (run-with-timer 0.1 nil #'diff-hl-show-hunk)))
+      (when diff-hl-show-hunk-posframe-show-head-line
+        (setq header-line-format (concat
+                                  " "
+                                  (propertize " Close "
+                                              'help-echo "Close (\\[diff-hl-show-hunk--posframe-hide])"
+                                              'face '(:height 0.7)
+                                              'mouse-face '(:box (:style released-button))
+                                              'keymap diff-hl-show-hunk-posframe--close-map)
+                                  " "
+                                  (diff-hl-show-hunk--posframe-button
+                                   "Previous hunk"
+                                   nil
+                                   (lambda ()
+                                     (interactive) (diff-hl-show-hunk--posframe-hide) (diff-hl-previous-hunk) (run-with-timer 0.1 nil #'diff-hl-show-hunk)))
+                                  
+                                  (diff-hl-show-hunk--posframe-button
+                                   "Next hunk"
+                                   nil
+                                   (lambda ()
+                                     (interactive) (diff-hl-show-hunk--posframe-hide) (diff-hl-next-hunk) (run-with-timer 0.1 nil #'diff-hl-show-hunk)))
 
-                                (diff-hl-show-hunk--posframe-button
-                                 "Revert hunk"
-                                 nil
-                                 (lambda ()
-                                   (interactive) (diff-hl-show-hunk--posframe-hide) (diff-hl-revert-hunk)))))
+                                  (diff-hl-show-hunk--posframe-button
+                                   "Revert hunk"
+                                   nil
+                                   (lambda ()
+                                     (interactive) (diff-hl-show-hunk--posframe-hide) (diff-hl-revert-hunk))))))
 
       (goto-char (point-min))
       (forward-line (1- line))
