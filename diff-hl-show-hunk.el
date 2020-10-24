@@ -316,7 +316,7 @@ to scroll in the posframe")
   "Implementation to show the hunk in a posframe.  BUFFER is a buffer with the hunk, and the central line should be LINE."
   
   (unless (featurep 'popup)
-    (error "Required package for diff-hl-show-hunk-popup not available: popup.  Please customize diff-hl-show-hunk-function"))
+    (user-error "Required package for diff-hl-show-hunk-popup not available: popup.  Please customize diff-hl-show-hunk-function"))
 
   (require 'popup)
   
@@ -366,15 +366,16 @@ to scroll in the posframe")
    " "))
 
 
+
 (defun diff-hl-show-hunk-posframe (buffer line)
   "Implementation to show the hunk in a posframe.  BUFFER is a buffer with the hunk, and the central line should be LINE."
 
   (unless (featurep 'posframe)
-    (error "Required package for diff-hl-show-hunk-posframe not available: posframe.  Please customize diff-hl-show-hunk-function"))
+    (user-error "Required package for diff-hl-show-hunk-posframe not available: posframe.  Please customize diff-hl-show-hunk-function"))
 
   (require 'posframe)
   (unless (posframe-workable-p)
-    (error "Package posframe is not workable.  Please customize diff-hl-show-hunk-function"))
+    (user-error "Package posframe is not workable.  Please customize diff-hl-show-hunk-function"))
 
   (diff-hl-show-hunk--posframe-hide)
   (setq diff-hl-show-hunk--hide-function #'diff-hl-show-hunk--posframe-hide)
@@ -396,6 +397,10 @@ to scroll in the posframe")
                   :respect-mode-line nil
                   :override-parameters diff-hl-show-hunk-posframe-parameters))
 
+
+  (set-frame-parameter diff-hl-show-hunk--frame 'drag-internal-border t)
+  (set-frame-parameter diff-hl-show-hunk--frame 'drag-with-header-line t)
+  
   ;; Recenter arround point
   (with-selected-frame diff-hl-show-hunk--frame
     (with-current-buffer buffer
@@ -439,9 +444,9 @@ to scroll in the posframe")
 If not, it fallbacks to `diff-hl-diff-goto-hunk`."
   (interactive)
   (cond ((not (vc-backend buffer-file-name))
-         (message "The buffer is not under version control"))
+         (user-error "The buffer is not under version control"))
         ((not (diff-hl-hunk-overlay-at (point)))
-         (message "There is no modified hunk at pos %s" (point)))
+         (user-error "There is no modified hunk at pos %s" (point)))
         ((not diff-hl-show-hunk-function)
          (diff-hl-diff-goto-hunk))
         ((not (let ((buffer-and-line (diff-hl-show-hunk-buffer)))
