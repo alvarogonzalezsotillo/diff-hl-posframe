@@ -247,6 +247,18 @@ to scroll in the popup")
     (select-frame-set-input-focus diff-hl-show-hunk--original-frame)
     (setq diff-hl-show-hunk--original-frame nil)))
 
+(defun diff-hl-show-hunk-previous ()
+  (interactive)
+  (let ((previousp (save-excursion
+                     (diff-hl-previous-hunk)
+                     )))
+    (if previousp
+        (user-error "There is no previous hunk")
+      (progn
+        (diff-hl-previous-hunk)
+        (diff-hl-show-hunk--posframe-hide)
+        (run-with-timer 0.1 nil #'diff-hl-show-hunk)))))
+
 
 (define-minor-mode diff-hl-show-hunk--popup-transient-mode
   "Temporal minor mode to control diff-hl popup."
@@ -413,8 +425,7 @@ to scroll in the posframe")
                                   (diff-hl-show-hunk--posframe-button
                                    "Previous hunk"
                                    nil
-                                   (lambda ()
-                                     (interactive) (diff-hl-show-hunk--posframe-hide) (diff-hl-previous-hunk) (run-with-timer 0.1 nil #'diff-hl-show-hunk)))
+                                   #'diff-hl-show-hunk-previous)
                                   
                                   (diff-hl-show-hunk--posframe-button
                                    "Next hunk"
