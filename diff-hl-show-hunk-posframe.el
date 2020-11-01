@@ -27,8 +27,6 @@
   "Internal border color of the posframe.  If it doesn't work, try with `internal-border` face."
   :type 'color)
 
-  :type 'boolean)
-
 (defcustom diff-hl-show-hunk-posframe-poshandler nil
   "Poshandler of the posframe (see `posframe-show`)."
   :type 'function)
@@ -40,7 +38,6 @@
 
 (defun diff-hl-show-hunk--posframe-hide ()
   (interactive)
-  (diff-hl-show-hunk--log "diff-hl-show-hunk--posframe-hide")
   (diff-hl-show-hunk--posframe-transient-mode -1)
   (when (frame-live-p diff-hl-show-hunk--frame)
     (make-frame-invisible diff-hl-show-hunk--frame))
@@ -69,7 +66,6 @@ to scroll in the posframe")
   :group 'diff-hl-show-hunk-group
   :global t
   
-  (diff-hl-show-hunk--log "diff-hl-show-hunk--posframe-transient-mode:%s" diff-hl-show-hunk--posframe-transient-mode)
   
   (remove-hook 'post-command-hook #'diff-hl-show-hunk--posframe-post-command-hook nil)
   (when diff-hl-show-hunk--posframe-transient-mode
@@ -83,8 +79,6 @@ to scroll in the posframe")
          (event-in-frame (eq last-event-frame diff-hl-show-hunk--frame))
          (has-focus (and (frame-live-p diff-hl-show-hunk--frame)(functionp 'frame-focus-state) (eq (frame-focus-state diff-hl-show-hunk--frame) t)))
          (still-visible (or event-in-frame allowed-command has-focus)))
-    (diff-hl-show-hunk--log "post-command-hook: this-command:%s allowed-command:%s event-in-frame:%s has-focus:%s"
-                            this-command allowed-command event-in-frame has-focus)
     (unless still-visible
       (diff-hl-show-hunk--posframe-hide))))
 

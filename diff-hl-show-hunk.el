@@ -28,11 +28,8 @@
 
 (require 'diff-hl)
 (require 'diff-hl-show-hunk-posframe)
+(require 'diff-hl-show-hunk-popup)
 
-(defun diff-hl-show-hunk--log (&rest _args)
-  "Used for debugging purposes."
-  ;;(apply 'message args)
-  nil)
 
 
 (defvar diff-hl-show-hunk-mode-map
@@ -61,7 +58,9 @@
 
 
 (defcustom diff-hl-show-hunk-narrow t
-  "Narrow the differences to the current hunk."(defcustom diff-hl-show-hunk-posframe-show-head-line t
+  "Narrow the differences to the current hunk.")
+
+(defcustom diff-hl-show-hunk-posframe-show-head-line t
   "Show some useful buttons at the top of the diff-hl posframe."
   :type 'boolean)
 
@@ -186,15 +185,10 @@ Returns a list with the buffer and the line number of the clicked line."
         (diff-hl-previous-hunk)))))
 
 (defun diff-hl-show-hunk--nextp (buffer)
-  (message "nextp:%s" buffer)
   (ignore-errors
-    (let ((ret  (with-current-buffer buffer
-                  (message "hola")
-                  (save-excursion
-                    (message "voy")
-                    (diff-hl-next-hunk)))))
-      (message "nextp: ret: %s "ret)
-      ret)))
+    (with-current-buffer buffer
+      (save-excursion
+        (diff-hl-next-hunk)))))
 
 (defun diff-hl-show-hunk-previous ()
   (interactive)
@@ -251,7 +245,6 @@ If not, it fallbacks to `diff-hl-diff-goto-hunk`."
                 (setq diff-hl-show-hunk--original-buffer (current-buffer))
                 (setq diff-hl-show-hunk--original-window (selected-window))
                 (apply diff-hl-show-hunk-function buffer-and-line)))
-         (diff-hl-show-hunk--log "Ha devuelto nil")
          (diff-hl-diff-goto-hunk))))
 
 
