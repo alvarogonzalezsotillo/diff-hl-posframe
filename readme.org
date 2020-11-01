@@ -1,5 +1,7 @@
 # file:https://melpa.org/packages/diff-hl-posframe-badge.svg]]
 
+*IMPORTANT: THIS REPOSITORY IS KEPT FOR HISTORICAL REASONS. THE NEW DEVELOPMENT IS IN [[https://github.com/alvarogonzalezsotillo/diff-hl-show-hunk]]*
+
 This emacs package shows a [[https://github.com/tumashu/posframe][posframe]] with the current hunk diff in a buffer under version control. It is based on [[https://github.com/dgutov/diff-hl][diff-hl]].
 
 
