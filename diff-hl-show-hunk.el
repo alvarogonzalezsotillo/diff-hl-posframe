@@ -1,4 +1,4 @@
-;;; diff-hl-show-hunk.el --- Integrate popup and diff-hl-diff-goto-hunk -*- lexical-binding: t -*-
+;;; diff-hl-show-hunk.el --- Integrate popup/posframe and diff-hl-diff-goto-hunk -*- lexical-binding: t -*-
 
 
 ;; Author:   Álvaro González Sotillo <alvarogonzalezsotillo@gmail.com>
@@ -9,10 +9,12 @@
 
 ;;; Commentary:
 
-;; `diff-hl-show-hunk' shows a posframe/tooltip with the modified hunk
+;; `diff-hl-show-hunk' shows a posframe/popup with the modified hunk
 ;; at point.  `diff-hl-show-hunk-function' contains the backend used
-;; to show the hunk.  It fallbacks to `diff-hl-diff-goto-hunk' if
-;; there is not a `diff-hl-show-hunk-function' defined.
+;; to show the hunk.  By default, it tries to use
+;; `diff-hl-show-hunk-posframe' (GUI), and then
+;; `diff-hl-show-hunk-popup'.  It fallbacks to `diff-hl-diff-goto-hunk'
+;; if there is not a `diff-hl-show-hunk-function' defined.
 
 ;; `diff-hl-show-hunk-mode' shows the posframe/popup when clicking
 ;; in the margin or the fringe.
